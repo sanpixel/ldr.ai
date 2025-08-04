@@ -1,0 +1,5 @@
+Requirement already satisfied: ezdxf in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (1.1.4)
+Requirement already satisfied: pyparsing>=2.0.1 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from ezdxf) (3.1.4)
+Requirement already satisfied: typing-extensions>=4.6.0 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from ezdxf) (4.12.2)
+Requirement already satisfied: numpy in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from ezdxf) (1.24.4)
+Requirement already satisfied: fonttools in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from ezdxf) (4.56.0)
