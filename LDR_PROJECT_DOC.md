@@ -2,6 +2,8 @@
 
 ## Warp Usage Information
 Warp usage: 781
+Current session: Clean repository setup with all commit history removed for security
+Application: Legal Description Reader - AI-powered property boundary mapping tool
 
 ---
 
