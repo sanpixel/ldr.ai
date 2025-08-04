@@ -970,9 +970,154 @@ def generate_random_bearing():
         'monument': monument
     }
 
+def show_video_intro():
+    """Show 7-second video intro with fade transition to main app."""
+    # Custom CSS for video intro and fade effect
+    st.markdown("""
+    <style>
+    .video-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        background: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .video-intro {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .fade-out {
+        animation: fadeOut 1s ease-out forwards;
+        animation-delay: 6s;
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; visibility: hidden; }
+    }
+    
+    .main-app {
+        opacity: 0;
+        animation: fadeIn 1s ease-in forwards;
+        animation-delay: 7s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    </style>
+    
+    <div class="video-container fade-out">
+        <video class="video-intro" autoplay muted>
+            <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    
+    <script>
+    setTimeout(function() {
+        document.querySelector('.video-container').style.display = 'none';
+    }, 7000);
+    </script>
+    """, unsafe_allow_html=True)
+
 def main():
-    st.set_page_config(layout="wide")
-    st.title("Line Drawing Application")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader")
+    
+    # Initialize session state for intro
+    if 'show_intro' not in st.session_state:
+        st.session_state.show_intro = True
+        st.session_state.intro_start_time = None
+    
+    # Show video intro on first load
+    if st.session_state.show_intro:
+        import base64
+        import time
+        
+        # Set start time if not set
+        if st.session_state.intro_start_time is None:
+            st.session_state.intro_start_time = time.time()
+        
+        # Check if 7 seconds have passed
+        if time.time() - st.session_state.intro_start_time >= 7:
+            st.session_state.show_intro = False
+            st.rerun()
+        
+        # Read and encode the video file
+        try:
+            with open('loading-video.mp4', 'rb') as video_file:
+                video_bytes = video_file.read()
+                video_base64 = base64.b64encode(video_bytes).decode()
+            
+            # Custom CSS and HTML for video intro
+            st.markdown(f"""
+            <style>
+            .video-container {{
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 9999;
+                background: black;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }}
+            
+            .video-intro {{
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }}
+            
+            .fade-out {{
+                animation: fadeOut 1s ease-out forwards;
+                animation-delay: 6s;
+            }}
+            
+            @keyframes fadeOut {{
+                from {{ opacity: 1; }}
+                to {{ opacity: 0; visibility: hidden; }}
+            }}
+            </style>
+            
+            <div class="video-container fade-out" id="videoIntro">
+                <video class="video-intro" autoplay muted>
+                    <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            
+            <script>
+            setTimeout(function() {{
+                window.location.reload();
+            }}, 7000);
+            </script>
+            """, unsafe_allow_html=True)
+            
+            # Auto-refresh every second to check timing
+            st.rerun()
+            
+        except FileNotFoundError:
+            st.warning("Video file 'loading-video.mp4' not found. Proceeding to main application.")
+            st.session_state.show_intro = False
+            st.rerun()
+        
+        # Don't show anything else during intro
+        return
+    
+    # Main application (shown after intro)
+    st.title("Legal Description Reader")
     initialize_session_state()
 
     # Create two columns for the main layout
