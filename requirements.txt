@@ -6,4 +6,5 @@ ezdxf
 pytesseract
 pdf2image
 openai
-reportlab 
+reportlab
+python-dotenv

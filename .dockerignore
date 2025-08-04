@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+*.env
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.dxf
+*.pdf
+test.dxf
+line_drawing.dxf
+
+# Documentation
+README.md
+TODO.md
+LDR_PROJECT_DOC.md
+
+# Development files
+.cursor/
