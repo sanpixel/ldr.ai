@@ -1,0 +1,79 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+      - prod
+
+jobs:
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils
+    
+    - name: Install Python dependencies  
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Check Python syntax
+      run: |
+        python -m py_compile main.py
+    
+    - name: Validate Docker build
+      run: |
+        docker build -t ldr-test .
+    
+    - name: Run basic import tests
+      run: |
+        python -c "
+        import main
+        print('✅ Main module imports successfully')
+        "
+      env:
+        OPENAI_API_KEY: "test-key"  # Dummy key for import testing
+    
+    - name: Check required files exist
+      run: |
+        files=("main.py" "requirements.txt" "Dockerfile" "PRD.md" "TODO.md")
+        for file in "${files[@]}"; do
+          if [[ -f "$file" ]]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file missing"
+            exit 1
+          fi
+        done
+    
+    - name: Validate deployment configuration
+      run: |
+        if [[ -f "cloudbuild.yaml" ]]; then
+          echo "✅ Cloud Build config exists"
+        fi
+        if [[ -f ".github/workflows/deploy.yml" ]]; then
+          echo "✅ GitHub Actions deploy workflow exists"  
+        fi
+        echo "📋 Deployment methods available"
+    
+    - name: Display PR validation summary
+      run: |
+        echo "🎉 PR Validation Complete!"
+        echo "📝 Python syntax: ✅ Valid"
+        echo "🐳 Docker build: ✅ Success"
+        echo "📦 Dependencies: ✅ Installed"
+        echo "📁 Required files: ✅ Present"

@@ -1,0 +1,80 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main      # Deploy production from main
+      - prod      # Deploy production from prod  
+      - dev       # Deploy development from dev
+  workflow_dispatch:  # Allow manual deployment
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        export_default_credentials: true
+    
+    - name: Configure Docker for GCR
+      run: |
+        gcloud auth configure-docker
+    
+    - name: Determine environment and service name
+      id: env
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/prod" ]]; then
+          echo "SERVICE_NAME=ldr-streamlit" >> $GITHUB_OUTPUT
+          echo "ENV_NAME=production" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+          echo "SERVICE_NAME=ldr-streamlit-dev" >> $GITHUB_OUTPUT
+          echo "ENV_NAME=development" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Build Docker image
+      run: |
+        docker build -t gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} .
+    
+    - name: Push Docker image to GCR
+      run: |
+        docker push gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}
+    
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy ${{ steps.env.outputs.SERVICE_NAME }} \
+          --image gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} \
+          --region $REGION \
+          --platform managed \
+          --allow-unauthenticated \
+          --memory 2Gi \
+          --cpu 2 \
+          --max-instances 10 \
+          --set-env-vars="OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+          --tag ${{ steps.env.outputs.ENV_NAME }}
+    
+    - name: Get service URL
+      id: url
+      run: |
+        URL=$(gcloud run services describe ${{ steps.env.outputs.SERVICE_NAME }} \
+          --region $REGION \
+          --format 'value(status.url)')
+        echo "SERVICE_URL=$URL" >> $GITHUB_OUTPUT
+    
+    - name: Display deployment info
+      run: |
+        echo "🚀 Deployment complete!"
+        echo "📝 Environment: ${{ steps.env.outputs.ENV_NAME }}"
+        echo "🔗 Service URL: ${{ steps.url.outputs.SERVICE_URL }}"
+        echo "🏷️  Image: gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
