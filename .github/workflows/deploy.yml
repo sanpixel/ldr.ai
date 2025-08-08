@@ -22,16 +22,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Decode service account key
-      run: |
-        echo '${{ secrets.GCP_SA_KEY }}' | base64 -d > /tmp/gcp-key.json
-        echo "GCP_SA_KEY_JSON=$(cat /tmp/gcp-key.json)" >> $GITHUB_ENV
-    
     - name: Google Auth
       id: auth
       uses: 'google-github-actions/auth@v2'
       with:
-        credentials_json: '${{ env.GCP_SA_KEY_JSON }}'
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
     
     - name: Docker Auth
       id: docker-auth
