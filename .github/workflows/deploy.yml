@@ -26,7 +26,7 @@ jobs:
       id: auth
       uses: 'google-github-actions/auth@v2'
       with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+        credentials_json: '${{ secrets.GCP_SA_KEY_RAW }}'
     
     - name: Docker Auth
       id: docker-auth
