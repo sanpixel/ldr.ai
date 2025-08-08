@@ -28,6 +28,12 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         export_default_credentials: true
     
+    - name: Authenticate with service account
+      run: |
+        echo '${{ secrets.GCP_SA_KEY }}' | base64 -d > /tmp/gcp-key.json
+        gcloud auth activate-service-account --key-file /tmp/gcp-key.json
+        gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+    
     - name: Determine environment
       id: env
       run: |
