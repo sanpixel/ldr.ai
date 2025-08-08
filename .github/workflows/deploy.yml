@@ -36,10 +36,10 @@ jobs:
       id: env
       run: |
         if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/prod" ]]; then
-          echo "SERVICE_NAME=ldr-streamlit" >> $GITHUB_OUTPUT
+          echo "SERVICE_NAME=ldr-ai" >> $GITHUB_OUTPUT
           echo "ENV_NAME=production" >> $GITHUB_OUTPUT
         elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-          echo "SERVICE_NAME=ldr-streamlit-dev" >> $GITHUB_OUTPUT
+          echo "SERVICE_NAME=ldr-ai-dev" >> $GITHUB_OUTPUT
           echo "ENV_NAME=development" >> $GITHUB_OUTPUT
         fi
     

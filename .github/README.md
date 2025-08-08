@@ -8,9 +8,9 @@ This directory contains GitHub Actions workflows for the LDR.ai Legal Descriptio
 Automatically deploys the Streamlit application to Google Cloud Run.
 
 **Triggers:**
-- Push to `main` → Production deployment (`ldr-streamlit`)
-- Push to `prod` → Production deployment (`ldr-streamlit`) 
-- Push to `dev` → Development deployment (`ldr-streamlit-dev`)
+- Push to `main` → Production deployment (`ldr-ai`)
+- Push to `prod` → Production deployment (`ldr-ai`) 
+- Push to `dev` → Development deployment (`ldr-ai-dev`)
 - Manual trigger via workflow_dispatch
 
 **Requirements:**
@@ -45,9 +45,9 @@ Set these in your repository: **Settings > Secrets and variables > Actions > Rep
 
 | Branch | Environment | Service Name | URL |
 |--------|-------------|--------------|-----|
-| `main` | Production | `ldr-streamlit` | https://ldr.ai |
-| `prod` | Production | `ldr-streamlit` | https://ldr.ai |
-| `dev` | Development | `ldr-streamlit-dev` | Auto-generated |
+| `main` | Production | `ldr-ai` | https://ldr.ai |
+| `prod` | Production | `ldr-ai` | https://ldr.ai |
+| `dev` | Development | `ldr-ai-dev` | Auto-generated |
 
 ## Service Account Setup
 
