@@ -14,7 +14,7 @@ env:
   
 jobs:
   deploy:
-    name: Deploy to Cloud Run
+    name: Trigger Cloud Build Deployment
     runs-on: ubuntu-latest
     
     steps:
@@ -28,52 +28,33 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         export_default_credentials: true
     
-    - name: Configure Docker for Artifact Registry
-      run: |
-        gcloud auth configure-docker us-central1-docker.pkg.dev
-    
-    - name: Determine environment and service name
+    - name: Determine environment
       id: env
       run: |
-        echo "SERVICE_NAME=ldr-ai" >> $GITHUB_OUTPUT
         if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/prod" ]]; then
           echo "ENV_NAME=production" >> $GITHUB_OUTPUT
         elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
           echo "ENV_NAME=development" >> $GITHUB_OUTPUT
         fi
     
-    - name: Build Docker image
+    - name: Submit Cloud Build
       run: |
-        docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} .
-    
-    - name: Push Docker image to Artifact Registry
-      run: |
-        docker push us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}
-    
-    - name: Deploy to Cloud Run
-      run: |
-        gcloud run deploy ${{ steps.env.outputs.SERVICE_NAME }} \
-          --image us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} \
-          --region $REGION \
-          --platform managed \
-          --allow-unauthenticated \
-          --memory 2Gi \
-          --cpu 2 \
-          --max-instances 10 \
-          --set-env-vars="OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
-          --tag ${{ steps.env.outputs.ENV_NAME }}
+        gcloud builds submit \
+          --config cloudbuild.yaml \
+          --substitutions COMMIT_SHA=${{ github.sha }},_ENV_NAME=${{ steps.env.outputs.ENV_NAME }},_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+          .
     
     - name: Get service URL
       id: url
       run: |
-        URL=$(gcloud run services describe ${{ steps.env.outputs.SERVICE_NAME }} \
+        URL=$(gcloud run services describe ldr-ai \
           --region $REGION \
           --format 'value(status.url)')
         echo "SERVICE_URL=$URL" >> $GITHUB_OUTPUT
     
     - name: Display deployment info
       run: |
-        echo "🚀 Deployment complete!"
+        echo "🚀 Cloud Build deployment complete!"
         echo "📝 Environment: ${{ steps.env.outputs.ENV_NAME }}"
         echo "🔗 Service URL: ${{ steps.url.outputs.SERVICE_URL }}"
-        echo "🏷️  Image: us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
+        echo "🏗️  Built with Cloud Build using commit: ${{ github.sha }}"
