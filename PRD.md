@@ -5,6 +5,9 @@ Warp usage: 781
 Current session: Clean repository setup with all commit history removed for security
 Application: Legal Description Reader - AI-powered property boundary mapping tool
 
+**2025-01-08 20:08 UTC - Warp usage: 2113**
+Current session: Documentation updates - added GitHub Actions deployment strategy and React frontend migration considerations to TODO.md, replaced LDR_PROJECT_DOC.md with comprehensive PRD.md
+
 ---
 
 ## 1. Overview
@@ -62,9 +65,22 @@ The application leverages Optical Character Recognition (OCR) and Natural Langua
 - **Dependencies**: All required packages are listed in `requirements.txt` and `pyproject.toml`.
 
 ### 3.3. Configuration and Deployment
-- **Environment Variables**: The application uses a `.env` file to manage sensitive information, such as the OpenAI API key.
+- **Environment Variables**: 
+    - **Local Development**: Uses a `.env` file for development
+    - **Production**: Environment variables are stored as GitHub Secrets and injected during deployment
+    - **Required Variables**:
+        - `OPENAI_API_KEY`: Required for GPT-based text extraction
+        - `SUPABASE_URL`: Database connection URL (required for user authentication)
+        - `SUPABASE_ANON_KEY`: Public API key for Supabase (required for user authentication)
+        - `SUPABASE_SERVICE_ROLE_KEY`: Service role key for admin operations (required for user authentication)
+        - `GOOGLE_CLIENT_ID`: OAuth client ID (required for Google authentication)
+        - `GOOGLE_CLIENT_SECRET`: OAuth client secret (required for Google authentication)
 - **CORS**: Cross-Origin Resource Sharing (CORS) is enabled in `.streamlit/config.toml` to allow file uploads from different origins. This is necessary for the PDF upload feature to work correctly in all browsers.
-- **Deployment**: The application is configured to run on port 5000 and is ready for deployment. The `README.md` file provides a security checklist and configuration details for production environments.
+- **Deployment**: The application supports two deployment approaches:
+    - **Current**: Google Cloud Build (`cloudbuild.yaml`) → Cloud Run on port 8080
+    - **Recommended**: GitHub Actions → Cloud Run for better deployment visibility and history
+    - Environment variables managed through GitHub Secrets or Cloud Run service configuration
+    - The `README.md` file provides a security checklist and configuration details for production environments.
 
 ## 4. How to Use the Application
 
@@ -130,15 +146,93 @@ ldr/
 ### Optional Dependencies
 - `FreeCAD`: Advanced CAD functionality (not required)
 
-## 8. Security Considerations
+## 8. User Authentication with Google OAuth
+
+**PREREQUISITE**: This feature requires Supabase configuration to be completed first for persistent user session management.
+
+### 8.1. Supabase Setup Requirements
+Before implementing Google OAuth, ensure the following Supabase configuration is in place:
+
+1. **Create Supabase Project**:
+   - Sign up at [supabase.com](https://supabase.com)
+   - Create a new project
+   - Navigate to Settings > API to get your keys
+
+2. **Environment Variables**:
+   - **Local Development**: Add to `.env` file:
+     ```
+     SUPABASE_URL=https://your-project-ref.supabase.co
+     SUPABASE_ANON_KEY=your-anon-key
+     SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+     ```
+   - **Production**: Add as GitHub Secrets in repository Settings > Secrets and variables > Actions
+
+3. **Database Tables**: Create tables for:
+   - User profiles
+   - User sessions
+   - Legal description processing history
+   - Exported drawings/reports
+
+### 8.2. Google OAuth Setup
+Once Supabase is configured, follow these steps to enable Google OAuth:
+
+1. **Google Cloud Console**:
+   - Create a new project or select existing one
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials
+   - Add authorized redirect URIs
+
+2. **Environment Variables**:
+   ```
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   ```
+
+3. **Supabase Auth Configuration**:
+   - Navigate to Authentication > Settings in Supabase
+   - Enable Google provider
+   - Add your Google OAuth credentials
+   - Configure redirect URLs
+
+### 8.3. Implementation Benefits
+- **Persistent Sessions**: User login state maintained across browser sessions
+- **Data History**: Save and retrieve previous legal description analyses
+- **User Preferences**: Store custom settings and export preferences
+- **Secure Access**: Industry-standard OAuth 2.0 authentication
+- **Multi-device Access**: Access saved work from different devices
+
+### 8.4. Required Dependencies
+Add these packages to `requirements.txt`:
+```
+supabase>=2.0.0
+streamlit>=1.28.0
+```
+
+### 8.5. Authentication Implementation
+The authentication system uses Supabase's built-in OAuth providers, which handles:
+- OAuth flow management
+- Token exchange and validation
+- User session persistence
+- Secure redirect handling
+
+**Key Benefits of Supabase Auth:**
+- No need for custom OAuth libraries
+- Built-in security best practices
+- Automatic user management
+- Session handling across devices
+- Row-level security integration
+
+## 9. Security Considerations
 
 - File upload validation (PDF files only)
 - CORS configuration for cross-origin requests
 - API key management through environment variables
+- OAuth 2.0 secure authentication flow
+- Database access control with row-level security
 - Input sanitization and error handling
 - Production deployment security checklist included in README.md
 
-## 9. Future Enhancement Opportunities
+## 10. Future Enhancement Opportunities
 
 - Support for additional file formats (TIFF, DOC, etc.)
 - Integration with GIS systems

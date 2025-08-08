@@ -26,6 +26,18 @@
   - Distinguish between POC (starting reference) and POB (property start)
   - Draw the tie line from the POC to the POB
   - Label both points correctly on the plot and in exports
+- [ ] **Migrate to GitHub Actions for deployment**:
+  - Replace Google Cloud Build with GitHub Actions workflow
+  - Better deployment visibility and history
+  - Automated CI/CD pipeline with proper testing
+  - Environment variable management through GitHub Secrets
+- [ ] **Consider React Frontend Migration**:
+  - Keep current Python backend (FastAPI/Flask) for AI processing
+  - Build modern React frontend for better UX
+  - Separate concerns: backend handles PDF processing, GPT analysis, DXF generation
+  - Frontend handles interactive plotting, forms, file uploads
+  - Better mobile responsiveness and modern UI components
+  - TypeScript support for better development experience
 
 ### 📊 Features
 - [ ] Add area calculation for closed polygons
