@@ -28,33 +28,32 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         export_default_credentials: true
     
-    - name: Configure Docker for GCR
+    - name: Configure Docker for Artifact Registry
       run: |
-        gcloud auth configure-docker
+        gcloud auth configure-docker us-central1-docker.pkg.dev
     
     - name: Determine environment and service name
       id: env
       run: |
+        echo "SERVICE_NAME=ldr-ai" >> $GITHUB_OUTPUT
         if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/prod" ]]; then
-          echo "SERVICE_NAME=ldr-ai" >> $GITHUB_OUTPUT
           echo "ENV_NAME=production" >> $GITHUB_OUTPUT
         elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-          echo "SERVICE_NAME=ldr-ai-dev" >> $GITHUB_OUTPUT
           echo "ENV_NAME=development" >> $GITHUB_OUTPUT
         fi
     
     - name: Build Docker image
       run: |
-        docker build -t gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} .
+        docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} .
     
-    - name: Push Docker image to GCR
+    - name: Push Docker image to Artifact Registry
       run: |
-        docker push gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}
+        docker push us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}
     
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy ${{ steps.env.outputs.SERVICE_NAME }} \
-          --image gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }} \
           --region $REGION \
           --platform managed \
           --allow-unauthenticated \
@@ -77,4 +76,4 @@ jobs:
         echo "🚀 Deployment complete!"
         echo "📝 Environment: ${{ steps.env.outputs.ENV_NAME }}"
         echo "🔗 Service URL: ${{ steps.url.outputs.SERVICE_URL }}"
-        echo "🏷️  Image: gcr.io/$PROJECT_ID/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
+        echo "🏷️  Image: us-central1-docker.pkg.dev/$PROJECT_ID/ldr-ai/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
