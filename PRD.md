@@ -1,7 +1,7 @@
 # LDR Application Documentation
 
-#section for AI / warp
-#these items should be designed and added to this document 
+#section for AI / warp to read and these items should be designed and added to this document 
+
 add google vision, does it work with camera function, what else can googlecloud free tier do?
 
 
