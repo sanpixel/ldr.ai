@@ -4,6 +4,11 @@ load_dotenv()
 import os
 print("API Key exists:", bool(os.environ.get("OPENAI_API_KEY")))
 
+# Debug Configuration
+DEBUG_MODE = True
+if DEBUG_MODE:
+    print("DEBUG MODE ENABLED")
+
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -1149,7 +1154,7 @@ def main():
         
         # Debug Buttons for Test PDFs
         st.subheader("Debug: Process Test PDFs")
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             if st.button("Test PDF 1"):
@@ -1207,6 +1212,25 @@ def main():
                             st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
                             st.session_state[f"monument_{i}"] = bearing.get('monument', '')
                         st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 3!")
+
+        with col4:
+            if st.button("Legal Desc PDF"):
+                with open("legal_description_page_63.pdf", "rb") as test_pdf_4:
+                    st.session_state.extracted_text = test_pdf_4.read()
+                with st.spinner('Processing Legal Description PDF...'):
+                    bearings = process_pdf(BytesIO(st.session_state.extracted_text))
+                    if bearings:
+                        st.session_state.parsed_bearings = bearings
+                        st.session_state.line_count = len(bearings)
+                        for i, bearing in enumerate(bearings):
+                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                        st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Legal Description PDF!")
 
         st.write("Use the buttons above to debug PDF processing.")
 
