@@ -99,12 +99,17 @@ def extract_bearings_with_gpt(text):
                 bearing_text = line.split(':', 1)[1].strip()
                 current_bearing = {'bearing': bearing_text} 
 
-                pattern = r'(S|South|N|North)[\s\.]*(\d+)[\s°degr\']*(?:(\d+)[\s\'min]*)?(?:(\d*\.?\d*)[\s"sec]*)?[\s\.]*(E|W|East|West)'
-                match = re.search(pattern, bearing_text, re.IGNORECASE)
-
-                if match:
-                    st.write(f"**DEBUG: Successfully matched bearing text: '{bearing_text}'**")
-                    groups = match.groups()
+                # Try short format first: S 73° 32' 01" W
+                short_pattern = r'(S|South|N|North)[\s\.]*(\d+)[\s°degr\']*(?:(\d+)[\s\'min]*)?(?:(\d*\.?\d*)[\s"sec]*)?[\s\.]*(E|W|East|West)'
+                short_match = re.search(short_pattern, bearing_text, re.IGNORECASE)
+                
+                # Try long format: North 71 degrees 53 minutes 10 seconds East
+                long_pattern = r'(North|South)\s+(\d+)\s+degrees?\s+(\d+)\s+minutes?\s+(\d+(?:\.\d+)?)\s+seconds?\s+(East|West)'
+                long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
+                
+                if short_match:
+                    st.write(f"**DEBUG: Successfully matched SHORT bearing text: '{bearing_text}'**")
+                    groups = short_match.groups()
                     
                     ns_raw = (groups[0] or '').upper()
                     ew_raw = (groups[4] or '').upper()
@@ -114,7 +119,19 @@ def extract_bearings_with_gpt(text):
                     current_bearing['degrees'] = int(groups[1]) if groups[1] else 0
                     current_bearing['minutes'] = int(groups[2]) if groups[2] else 0
                     current_bearing['seconds'] = int(float(groups[3])) if groups[3] else 0
-                    current_bearing['original_text'] = bearing_text  # Store the original bearing text
+                    current_bearing['original_text'] = bearing_text
+                    
+                elif long_match:
+                    st.write(f"**DEBUG: Successfully matched LONG bearing text: '{bearing_text}'**")
+                    groups = long_match.groups()
+                    
+                    current_bearing['cardinal_ns'] = groups[0]  # North or South
+                    current_bearing['cardinal_ew'] = groups[4]  # East or West
+                    current_bearing['degrees'] = int(groups[1])
+                    current_bearing['minutes'] = int(groups[2])
+                    current_bearing['seconds'] = int(float(groups[3]))
+                    current_bearing['original_text'] = bearing_text
+                    
                 else:
                     st.write(f"**DEBUG: FAILED to match bearing text: '{bearing_text}'**")
                     current_bearing['original_text'] = bearing_text  # Store even if parsing failed
@@ -653,6 +670,12 @@ def process_pdf(uploaded_file):
 
         # Store extracted text in session state
         st.session_state.extracted_text = extracted_text
+        
+        # Debug: Show extracted text if debug mode is enabled
+        if DEBUG_MODE:
+            st.write("**DEBUG: OCR Extracted Text:**")
+            st.text_area("Raw OCR Output", extracted_text, height=200, help="This is the raw text extracted from the PDF using OCR")
+            st.write(f"**DEBUG: Extracted text length: {len(extracted_text)} characters**")
 
         # Extract supplemental information first
         if os.environ.get("OPENAI_API_KEY"):
