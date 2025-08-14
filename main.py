@@ -99,17 +99,24 @@ def extract_bearings_with_gpt(text):
                 bearing_text = line.split(':', 1)[1].strip()
                 current_bearing = {'bearing': bearing_text} 
 
-                # Try short format first: S 73° 32' 01" W or North 20 degrees 00 minutes 36 seconds West
-                short_pattern = r'(S|South|N|North)[\s\.]*(\d+)[\s°degr\']*(?:(\d+)[\s\'min(utes)?]*)?(?:(\d*\.?\d*)[\s"sec(onds)?]*)?[\s\.]*(E|W|East|West)'
-                short_match = re.search(short_pattern, bearing_text, re.IGNORECASE)
+                # Try unified pattern for both formats
+                # Handles: S 73° 32' 01" W AND North 71 degrees 51 minutes 19 seconds East
+                pattern = r'(S|South|N|North)[\s\.]*(\d+)(?:[\s°degrees]+(?:(\d+)(?:[\s\'minutes]+(?:(\d+(?:\.\d+)?)(?:[\s"seconds]+)?)?)?)?)?[\s]*(E|W|East|West)'
+                match = re.search(pattern, bearing_text, re.IGNORECASE)
                 
                 # Try long format: North 71 degrees 53 minutes 10 seconds East
                 long_pattern = r'(North|South)\s+(\d+)\s+degrees?\s+(\d+)\s+minutes?\s+(\d+(?:\.\d+)?)\s+seconds?\s+(East|West)'
                 long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
                 
-                if short_match:
-                    st.write(f"**DEBUG: Successfully matched SHORT bearing text: '{bearing_text}'**")
-                    groups = short_match.groups()
+                if match:
+                    st.write(f"**DEBUG: Successfully matched bearing text: '{bearing_text}'**")
+                    groups = match.groups()
+                    st.write(f"**DEBUG: Regex groups: {groups}**")
+                    st.write(f"**DEBUG: Group 0 (NS): '{groups[0]}'**")
+                    st.write(f"**DEBUG: Group 1 (degrees): '{groups[1]}'**")
+                    st.write(f"**DEBUG: Group 2 (minutes): '{groups[2]}'**")
+                    st.write(f"**DEBUG: Group 3 (seconds): '{groups[3]}'**")
+                    st.write(f"**DEBUG: Group 4 (EW): '{groups[4]}'**")
                     
                     ns_raw = (groups[0] or '').upper()
                     ew_raw = (groups[4] or '').upper()
@@ -120,6 +127,8 @@ def extract_bearings_with_gpt(text):
                     current_bearing['minutes'] = int(groups[2]) if groups[2] else 0
                     current_bearing['seconds'] = int(float(groups[3])) if groups[3] else 0
                     current_bearing['original_text'] = bearing_text
+                    
+                    st.write(f"**DEBUG: Parsed values - degrees: {current_bearing['degrees']}, minutes: {current_bearing['minutes']}, seconds: {current_bearing['seconds']}**")
                     
                 elif long_match:
                     st.write(f"**DEBUG: Successfully matched LONG bearing text: '{bearing_text}'**")
