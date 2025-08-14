@@ -99,8 +99,8 @@ def extract_bearings_with_gpt(text):
                 bearing_text = line.split(':', 1)[1].strip()
                 current_bearing = {'bearing': bearing_text} 
 
-                # Try short format first: S 73° 32' 01" W
-                short_pattern = r'(S|South|N|North)[\s\.]*(\d+)[\s°degr\']*(?:(\d+)[\s\'min]*)?(?:(\d*\.?\d*)[\s"sec]*)?[\s\.]*(E|W|East|West)'
+                # Try short format first: S 73° 32' 01" W or North 20 degrees 00 minutes 36 seconds West
+                short_pattern = r'(S|South|N|North)[\s\.]*(\d+)[\s°degr\']*(?:(\d+)[\s\'min(utes)?]*)?(?:(\d*\.?\d*)[\s"sec(onds)?]*)?[\s\.]*(E|W|East|West)'
                 short_match = re.search(short_pattern, bearing_text, re.IGNORECASE)
                 
                 # Try long format: North 71 degrees 53 minutes 10 seconds East
