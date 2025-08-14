@@ -1,5 +1,10 @@
 # LDR Application Documentation
 
+#section for AI / warp
+#these items should be designed and added to this document 
+add google vision, does it work with camera function, what else can googlecloud free tier do?
+
+
 ## Warp Usage Information
 Warp usage: 781
 Current session: Clean repository setup with all commit history removed for security
