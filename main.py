@@ -67,21 +67,68 @@ def format_bearing_concise(bearing_desc):
 def extract_bearings_with_gpt(text):
     """Use GPT to extract bearings from text with a robust, line-by-line parser."""
     try:
-        # Load prompt from external file
+        # Load prompt from external file with robust fallback
         try:
             with open('bearings_prompt.txt', 'r', encoding='utf-8') as f:
                 prompt_template = f.read().strip()
-        except FileNotFoundError:
-            st.error("bearings_prompt.txt file not found. Using fallback prompt.")
-            # Fallback to original hardcoded prompt
-            prompt_template = """Extract all bearings, distances, and monuments from the following legal description text. 
-            For each line segment found, output in this exact format:
+        except (FileNotFoundError, IOError, PermissionError) as e:
+            if DEBUG_MODE:
+                st.warning(f"bearings_prompt.txt file not accessible ({str(e)}). Using fallback prompt.")
+            # Current working prompt as fallback (embedded for Cloud Run reliability)
+            prompt_template = """First classify the legal description type using these criteria:
+
+EXPLICIT_BEARINGS: Contains specific measurements like:
+- "N 45° 30' 15\" E 150.00 feet"
+- "North 71 degrees 53 minutes East 200 feet"
+- "S 73° 32' 01\" W 125.50 feet"
+- Any text with degrees, minutes, seconds AND distances
+
+ABSTRACT_BEARINGS: Contains directional descriptions without specific measurements:
+- "northerly along the creek line"
+- "following the existing fence line"
+- "along the property line of adjacent parcel"
+- "easterly along the right-of-way"
+
+EXTERNAL_REF: References external documents or survey systems:
+- "Lot 5, Block 3, Happy Valley Subdivision"
+- "as recorded in Plat Book 42, Page 15"
+- "Section 12, Township 5 North, Range 3 West"
+- "according to the plat thereof"
+
+Provide your analysis in this exact format:
+
+CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
+CONFIDENCE: [high|medium|low]
+REASONING: [explain why you chose this classification]
+EVIDENCE: [all of the specific text that supports your decision]
+RANK_ALTERNATIVES:
+- Second choice: [classification] (reason)
+- Third choice: [classification] (reason)
+
+Then extract data based on classification:
+
+If EXPLICIT_BEARINGS:
+
+then Extract all bearings, distances, and monuments from the following legal description text. 
+     For each line segment found, output in this exact format:
             BEARING: [bearing]
             DISTANCE: [distance]
             MONUMENT: [monument/reference]
 
             Ensure each attribute is on a new line.
-            Text to analyze:"""
+
+If ABSTRACT_BEARINGS:
+DESCRIPTION: [boundary description]
+REFERENCE: [reference points/lines]
+
+If EXTERNAL_REF:
+LOT: [lot number]
+BLOCK: [block number]
+SUBDIVISION: [subdivision name]
+PLAT_BOOK: [plat book reference]
+SECTION: [section/township/range if applicable]
+
+Text to analyze:"""
         
         prompt = prompt_template + "\n" + text
         
@@ -129,10 +176,10 @@ def extract_bearings_with_gpt(text):
             elif line.upper().startswith('RANK_ALTERNATIVES:'):
                 collecting_alternatives = True
                 alternatives_lines = []
-            elif collecting_alternatives and line.startswith('- '):
-                alternatives_lines.append(line)
-            elif collecting_alternatives and line and not line.startswith('- '):
-                # Stop collecting if we hit a non-alternative line
+            elif collecting_alternatives and (line.startswith('- ') or line.strip().startswith('- ')):
+                alternatives_lines.append(line.strip())
+            elif collecting_alternatives and line and not line.strip().startswith('- ') and line.strip() and not line.strip().startswith('Second choice:') and not line.strip().startswith('Third choice:'):
+                # Stop collecting if we hit a non-alternative line (but allow empty lines)
                 collecting_alternatives = False
                 reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
         
@@ -147,18 +194,19 @@ def extract_bearings_with_gpt(text):
         except Exception as log_error:
             st.warning(f"Could not log reasoning data: {str(log_error)}")
         
-        # Display reasoning in debug mode
+        # Display reasoning in debug mode using expander
         if DEBUG_MODE:
-            st.write("**DEBUG: AI Classification Reasoning:**")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Classification**: {reasoning_data.get('classification', 'Not found')}")
-                st.write(f"**Confidence**: {reasoning_data.get('confidence', 'Not found')}")
-            with col2:
-                st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
-                st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
-            if reasoning_data.get('alternatives'):
-                st.write(f"**Alternatives**: {reasoning_data.get('alternatives')}")
+            with st.expander("🔍 DEBUG: AI Classification Reasoning", expanded=False):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Classification**: {reasoning_data.get('classification', 'Not found')}")
+                    st.write(f"**Confidence**: {reasoning_data.get('confidence', 'Not found')}")
+                with col2:
+                    st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
+                    st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
+                if reasoning_data.get('alternatives'):
+                    st.write(f"**Alternatives**:")
+                    st.text(reasoning_data.get('alternatives'))
         
         # Parse bearings - GPT prompt handles classification, we just extract the data
         bearings = []
@@ -767,9 +815,9 @@ def process_pdf(uploaded_file):
         
         # Debug: Show extracted text if debug mode is enabled
         if DEBUG_MODE:
-            st.write("**DEBUG: OCR Extracted Text:**")
-            st.text_area("Raw OCR Output", extracted_text, height=200, help="This is the raw text extracted from the PDF using OCR")
-            st.write(f"**DEBUG: Extracted text length: {len(extracted_text)} characters**")
+            with st.expander("🔍 DEBUG: OCR Extracted Text", expanded=False):
+                st.write(f"**Extracted text length**: {len(extracted_text)} characters")
+                st.text_area("Raw OCR Output", extracted_text, height=200, help="This is the raw text extracted from the PDF using OCR")
 
         # Extract supplemental information first
         if os.environ.get("OPENAI_API_KEY"):

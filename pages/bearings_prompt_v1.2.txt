@@ -1,0 +1,55 @@
+First classify the legal description type using these criteria:
+
+EXPLICIT_BEARINGS: Contains specific measurements like:
+- "N 45° 30' 15\" E 150.00 feet"
+- "North 71 degrees 53 minutes East 200 feet"
+- "S 73° 32' 01\" W 125.50 feet"
+- Any text with degrees, minutes, seconds AND distances
+
+ABSTRACT_BEARINGS: Contains directional descriptions without specific measurements:
+- "northerly along the creek line"
+- "following the existing fence line"
+- "along the property line of adjacent parcel"
+- "easterly along the right-of-way"
+
+EXTERNAL_REF: References external documents or survey systems:
+- "Lot 5, Block 3, Happy Valley Subdivision"
+- "as recorded in Plat Book 42, Page 15"
+- "Section 12, Township 5 North, Range 3 West"
+- "according to the plat thereof"
+
+Provide your analysis in this exact format:
+
+CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
+CONFIDENCE: [high|medium|low]
+REASONING: [explain why you chose this classification]
+EVIDENCE: [all of the specific test that supports your decision]
+RANK_ALTERNATIVES:
+  - Second choice: [classification] (reason)
+  - Third choice: [classification] (reason)
+
+            
+Then extract data based on classification:
+
+If EXPLICIT_BEARINGS:
+
+then Extract all bearings, distances, and monuments from the following legal description text. 
+     For each line segment found, output in this exact format:
+            BEARING: [bearing]
+            DISTANCE: [distance]
+            MONUMENT: [monument/reference]
+
+            Ensure each attribute is on a new line.
+
+If ABSTRACT_BEARINGS:
+DESCRIPTION: [boundary description]
+REFERENCE: [reference points/lines]
+
+If EXTERNAL_REF:
+LOT: [lot number]
+BLOCK: [block number]
+SUBDIVISION: [subdivision name]
+PLAT_BOOK: [plat book reference]
+SECTION: [section/township/range if applicable]
+
+Text to analyze:
