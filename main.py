@@ -73,7 +73,7 @@ def extract_bearings_with_gpt(text):
                 prompt_template = f.read().strip()
         except (FileNotFoundError, IOError, PermissionError) as e:
             if DEBUG_MODE:
-                st.warning(f"bearings_prompt.txt file not accessible ({str(e)}). Using fallback prompt.")
+                st.warning(f"🔄 DEBUG: bearings_prompt.txt file not accessible ({str(e)}). Using embedded fallback prompt.")
             # Current working prompt as fallback (embedded for Cloud Run reliability)
             prompt_template = """First classify the legal description type using these criteria:
 
@@ -238,10 +238,7 @@ Text to analyze:"""
                 if match:
                     groups = match.groups()
                     if DEBUG_MODE:
-                        with st.expander(f"🔍 DEBUG: Bearing Parse - '{bearing_text}'", expanded=False):
-                            st.write(f"**Successfully matched bearing text**: '{bearing_text}'")
-                            st.write(f"**Regex groups**: {groups}")
-                            st.write(f"**Pattern used**: Standard format")
+                        st.markdown(f"<small>🔍 DEBUG: Successfully matched '{bearing_text}' | Groups: {groups} | Pattern: Standard</small>", unsafe_allow_html=True)
                     
                     ns_raw = (groups[0] or '').upper()
                     ew_raw = (groups[4] or '').upper()
@@ -256,10 +253,7 @@ Text to analyze:"""
                 elif long_match:
                     groups = long_match.groups()
                     if DEBUG_MODE:
-                        with st.expander(f"🔍 DEBUG: Bearing Parse - '{bearing_text}'", expanded=False):
-                            st.write(f"**Successfully matched LONG bearing text**: '{bearing_text}'")
-                            st.write(f"**Regex groups**: {groups}")
-                            st.write(f"**Pattern used**: Long format")
+                        st.markdown(f"<small>🔍 DEBUG: Successfully matched LONG '{bearing_text}' | Groups: {groups} | Pattern: Long</small>", unsafe_allow_html=True)
                     
                     current_bearing['cardinal_ns'] = groups[0]  # North or South
                     current_bearing['cardinal_ew'] = groups[4]  # East or West
@@ -287,10 +281,15 @@ Text to analyze:"""
         # Return only fully parsed bearings, but let GPT handle the classification logic
         parsed_bearings = [b for b in bearings if 'cardinal_ns' in b]
         
-        if DEBUG_MODE and reasoning_data.get('classification') != 'explicit_bearings':
-            st.write(f"**DEBUG: Classification was '{reasoning_data.get('classification')}' but found {len(parsed_bearings)} bearings**")
-            if parsed_bearings:
-                st.write("**DEBUG: This might indicate the prompt isn't working as expected**")
+        if DEBUG_MODE:
+            classification = reasoning_data.get('classification', 'Unknown')
+            st.write(f"**DEBUG: Classification: '{classification}' | Found {len(parsed_bearings)} valid bearings**")
+            
+            # Only show warning if there's an actual mismatch
+            if classification.lower() not in ['explicit_bearings'] and len(parsed_bearings) > 0:
+                st.write("**DEBUG: Unexpected - Non-explicit classification but found bearings. This might indicate prompt issues.**")
+            elif classification.lower() in ['explicit_bearings'] and len(parsed_bearings) == 0:
+                st.write("**DEBUG: Unexpected - Explicit classification but no bearings found. Check parsing logic.**")
 
         return parsed_bearings, result_text
 

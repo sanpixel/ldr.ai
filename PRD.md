@@ -75,9 +75,9 @@ The application leverages Optical Character Recognition (OCR) and Natural Langua
     - **Production**: Environment variables are stored as GitHub Secrets and injected during deployment
     - **Required Variables**:
         - `OPENAI_API_KEY`: Required for GPT-based text extraction
-        - `SUPABASE_URL`: Database connection URL (required for user authentication)
-        - `SUPABASE_ANON_KEY`: Public API key for Supabase (required for user authentication)
-        - `SUPABASE_SERVICE_ROLE_KEY`: Service role key for admin operations (required for user authentication)
+        - `SUPABASE_URL`: Database connection URL (required for data storage and user authentication)
+        - `SUPABASE_ANON_KEY`: Public API key for Supabase (required for data storage and user authentication)
+        - `SUPABASE_SERVICE_ROLE_KEY`: Service role key for admin operations (required for data storage and user authentication)
         - `GOOGLE_CLIENT_ID`: OAuth client ID (required for Google authentication)
         - `GOOGLE_CLIENT_SECRET`: OAuth client secret (required for Google authentication)
 - **CORS**: Cross-Origin Resource Sharing (CORS) is enabled in `.streamlit/config.toml` to allow file uploads from different origins. This is necessary for the PDF upload feature to work correctly in all browsers.
