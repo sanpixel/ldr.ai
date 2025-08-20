@@ -24,6 +24,7 @@ import os
 from openai import OpenAI
 import json
 import io
+from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -66,15 +67,34 @@ def format_bearing_concise(bearing_desc):
 def extract_bearings_with_gpt(text):
     """Use GPT to extract bearings from text with a robust, line-by-line parser."""
     try:
-        prompt = """Extract all bearings, distances, and monuments from the following legal description text. 
-        For each line segment found, output in this exact format:
-        BEARING: [bearing]
-        DISTANCE: [distance]
-        MONUMENT: [monument/reference]
+        # Load prompt from external file
+        try:
+            with open('bearings_prompt.txt', 'r', encoding='utf-8') as f:
+                prompt_template = f.read().strip()
+        except FileNotFoundError:
+            st.error("bearings_prompt.txt file not found. Using fallback prompt.")
+            # Fallback to original hardcoded prompt
+            prompt_template = """Extract all bearings, distances, and monuments from the following legal description text. 
+            For each line segment found, output in this exact format:
+            BEARING: [bearing]
+            DISTANCE: [distance]
+            MONUMENT: [monument/reference]
 
-        Ensure each attribute is on a new line.
-        Text to analyze:
-        """ + text
+            Ensure each attribute is on a new line.
+            Text to analyze:"""
+        
+        prompt = prompt_template + "\n" + text
+        
+        # Original hardcoded prompt (commented out for reference)
+        # prompt = """Extract all bearings, distances, and monuments from the following legal description text. 
+        # For each line segment found, output in this exact format:
+        # BEARING: [bearing]
+        # DISTANCE: [distance]
+        # MONUMENT: [monument/reference]
+        #
+        # Ensure each attribute is on a new line.
+        # Text to analyze:
+        # """ + text
 
         response = client.chat.completions.create(
             model="ft:gpt-3.5-turbo-0125:personal:ldr:BEoe3v67",
@@ -83,16 +103,75 @@ def extract_bearings_with_gpt(text):
         )
 
         result_text = response.choices[0].message.content
+        
+        # Parse reasoning data first
+        reasoning_data = {
+            'timestamp': datetime.now().isoformat(),
+            'input_text': text[:1000],  # First 1000 chars for logging
+            'full_response': result_text
+        }
+        
+        # Extract reasoning components
+        lines = result_text.split('\n')
+        alternatives_lines = []
+        collecting_alternatives = False
+        
+        for line in lines:
+            line = line.strip()
+            if line.upper().startswith('CLASSIFICATION:'):
+                reasoning_data['classification'] = line.split(':', 1)[1].strip()
+            elif line.upper().startswith('CONFIDENCE:'):
+                reasoning_data['confidence'] = line.split(':', 1)[1].strip()
+            elif line.upper().startswith('REASONING:'):
+                reasoning_data['reasoning'] = line.split(':', 1)[1].strip()
+            elif line.upper().startswith('EVIDENCE:'):
+                reasoning_data['evidence'] = line.split(':', 1)[1].strip()
+            elif line.upper().startswith('RANK_ALTERNATIVES:'):
+                collecting_alternatives = True
+                alternatives_lines = []
+            elif collecting_alternatives and line.startswith('- '):
+                alternatives_lines.append(line)
+            elif collecting_alternatives and line and not line.startswith('- '):
+                # Stop collecting if we hit a non-alternative line
+                collecting_alternatives = False
+                reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
+        
+        # Handle case where alternatives are at the end
+        if collecting_alternatives and alternatives_lines:
+            reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
+        
+        # Log reasoning data to file
+        try:
+            with open('classification_reasoning.json', 'a', encoding='utf-8') as f:
+                f.write(json.dumps(reasoning_data) + '\n')
+        except Exception as log_error:
+            st.warning(f"Could not log reasoning data: {str(log_error)}")
+        
+        # Display reasoning in debug mode
+        if DEBUG_MODE:
+            st.write("**DEBUG: AI Classification Reasoning:**")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Classification**: {reasoning_data.get('classification', 'Not found')}")
+                st.write(f"**Confidence**: {reasoning_data.get('confidence', 'Not found')}")
+            with col2:
+                st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
+                st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
+            if reasoning_data.get('alternatives'):
+                st.write(f"**Alternatives**: {reasoning_data.get('alternatives')}")
+        
+        # Parse bearings - GPT prompt handles classification, we just extract the data
         bearings = []
         current_bearing = {}
-        lines = result_text.split('\n')
-
+        
+        # Process all lines to extract bearings (GPT already filtered by classification)
         for line in lines:
             line = line.strip()
             if not line:
                 continue
 
             if line.upper().startswith('BEARING:'):
+                # Save previous bearing if it's complete
                 if current_bearing.get('distance'):
                     bearings.append(current_bearing)
                 
@@ -109,15 +188,12 @@ def extract_bearings_with_gpt(text):
                 long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
                 
                 if match:
-                    st.write(f"**DEBUG: Successfully matched bearing text: '{bearing_text}'**")
-                    groups = match.groups()
-                    st.write(f"**DEBUG: Regex groups: {groups}**")
-                    st.write(f"**DEBUG: Group 0 (NS): '{groups[0]}'**")
-                    st.write(f"**DEBUG: Group 1 (degrees): '{groups[1]}'**")
-                    st.write(f"**DEBUG: Group 2 (minutes): '{groups[2]}'**")
-                    st.write(f"**DEBUG: Group 3 (seconds): '{groups[3]}'**")
-                    st.write(f"**DEBUG: Group 4 (EW): '{groups[4]}'**")
+                    if DEBUG_MODE:
+                        st.write(f"**DEBUG: Successfully matched bearing text: '{bearing_text}'**")
+                        groups = match.groups()
+                        st.write(f"**DEBUG: Regex groups: {groups}**")
                     
+                    groups = match.groups()
                     ns_raw = (groups[0] or '').upper()
                     ew_raw = (groups[4] or '').upper()
 
@@ -128,12 +204,11 @@ def extract_bearings_with_gpt(text):
                     current_bearing['seconds'] = int(float(groups[3])) if groups[3] else 0
                     current_bearing['original_text'] = bearing_text
                     
-                    st.write(f"**DEBUG: Parsed values - degrees: {current_bearing['degrees']}, minutes: {current_bearing['minutes']}, seconds: {current_bearing['seconds']}**")
-                    
                 elif long_match:
-                    st.write(f"**DEBUG: Successfully matched LONG bearing text: '{bearing_text}'**")
-                    groups = long_match.groups()
+                    if DEBUG_MODE:
+                        st.write(f"**DEBUG: Successfully matched LONG bearing text: '{bearing_text}'**")
                     
+                    groups = long_match.groups()
                     current_bearing['cardinal_ns'] = groups[0]  # North or South
                     current_bearing['cardinal_ew'] = groups[4]  # East or West
                     current_bearing['degrees'] = int(groups[1])
@@ -142,7 +217,8 @@ def extract_bearings_with_gpt(text):
                     current_bearing['original_text'] = bearing_text
                     
                 else:
-                    st.write(f"**DEBUG: FAILED to match bearing text: '{bearing_text}'**")
+                    if DEBUG_MODE:
+                        st.write(f"**DEBUG: FAILED to match bearing text: '{bearing_text}'**")
                     current_bearing['original_text'] = bearing_text  # Store even if parsing failed
 
             elif line.upper().startswith('DISTANCE:') and current_bearing:
@@ -154,10 +230,19 @@ def extract_bearings_with_gpt(text):
             elif line.upper().startswith('MONUMENT:') and current_bearing:
                 current_bearing['monument'] = line.split(':', 1)[1].strip()
 
+        # Add the last bearing if complete
         if current_bearing.get('distance'):
             bearings.append(current_bearing)
 
-        return [b for b in bearings if 'cardinal_ns' in b], result_text # Return only fully parsed bearings
+        # Return only fully parsed bearings, but let GPT handle the classification logic
+        parsed_bearings = [b for b in bearings if 'cardinal_ns' in b]
+        
+        if DEBUG_MODE and reasoning_data.get('classification') != 'explicit_bearings':
+            st.write(f"**DEBUG: Classification was '{reasoning_data.get('classification')}' but found {len(parsed_bearings)} bearings**")
+            if parsed_bearings:
+                st.write("**DEBUG: This might indicate the prompt isn't working as expected**")
+
+        return parsed_bearings, result_text
 
     except Exception as e:
         st.error(f"Error using GPT to parse text: {str(e)}")
