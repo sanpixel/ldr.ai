@@ -48,6 +48,12 @@
 - [ ] Add coordinate system transformations
 
 ### 🎨 UI/UX
+- [ ] **Improve debug architecture**:
+  - Replace global DEBUG_MODE with page-specific debug controls
+  - Add debug level granularity (off/basic/detailed/full)
+  - Create context-aware debug display with cleaner UI using tabs
+  - Implement user preference persistence for debug settings
+  - Make main page default to clean UI, test pages to debug-enabled
 - [ ] Add tooltips to explain surveying terms
 - [ ] Improve mobile responsiveness
 - [ ] Add keyboard shortcuts for common actions
