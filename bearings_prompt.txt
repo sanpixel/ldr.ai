@@ -23,17 +23,23 @@ Provide your analysis in this exact format:
 CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
 CONFIDENCE: [high|medium|low]
 REASONING: [explain why you chose this classification]
-EVIDENCE: [specific text fragments that support your decision]
+EVIDENCE: [all of the specific test that supports your decision]
 RANK_ALTERNATIVES:
   - Second choice: [classification] (reason)
   - Third choice: [classification] (reason)
 
+            
 Then extract data based on classification:
 
 If EXPLICIT_BEARINGS:
-BEARING: [bearing]
-DISTANCE: [distance]
-MONUMENT: [monument/reference]
+
+then Extract all bearings, distances, and monuments from the following legal description text. 
+     For each line segment found, output in this exact format:
+            BEARING: [bearing]
+            DISTANCE: [distance]
+            MONUMENT: [monument/reference]
+
+            Ensure each attribute is on a new line.
 
 If ABSTRACT_BEARINGS:
 DESCRIPTION: [boundary description]
