@@ -1157,7 +1157,7 @@ def main():
     
     # Initialize session state for intro
     if 'show_intro' not in st.session_state:
-        st.session_state.show_intro = True
+        st.session_state.show_intro = False  # Disabled for debugging
         st.session_state.intro_start_time = None
     
     # Show video intro on first load
