@@ -81,6 +81,16 @@ if os.path.exists(reasoning_file):
                         if entry.get('evidence'):
                             st.markdown("**Evidence Found:**")
                             st.write(entry.get('evidence', 'No evidence provided'))
+                        
+                        if entry.get('alternatives'):
+                            st.markdown("**Alternative Classifications:**")
+                            alternatives_text = entry.get('alternatives', '')
+                            if alternatives_text:
+                                # Split by newlines since alternatives is stored as a joined string
+                                alternatives_list = alternatives_text.split('\n')
+                                for alt in alternatives_list:
+                                    if alt.strip():  # Only show non-empty lines
+                                        st.write(f"• {alt.strip()}")
                     
                     with col2:
                         st.markdown("**Classification Details:**")
@@ -89,11 +99,6 @@ if os.path.exists(reasoning_file):
                             "Confidence": entry.get('confidence', 'Unknown'),
                             "Timestamp": entry.get('timestamp', 'Unknown')
                         })
-                        
-                        if entry.get('alternatives'):
-                            st.markdown("**Alternative Classifications:**")
-                            for alt in entry.get('alternatives', []):
-                                st.write(f"• {alt}")
             
             # Export functionality
             st.subheader("📤 Export Data")

@@ -201,12 +201,12 @@ Text to analyze:"""
                 with col1:
                     st.write(f"**Classification**: {reasoning_data.get('classification', 'Not found')}")
                     st.write(f"**Confidence**: {reasoning_data.get('confidence', 'Not found')}")
+                    if reasoning_data.get('alternatives'):
+                        st.write(f"**Alternatives**:")
+                        st.text(reasoning_data.get('alternatives'))
                 with col2:
                     st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
                     st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
-                if reasoning_data.get('alternatives'):
-                    st.write(f"**Alternatives**:")
-                    st.text(reasoning_data.get('alternatives'))
         
         # Parse bearings - GPT prompt handles classification, we just extract the data
         bearings = []
@@ -236,12 +236,13 @@ Text to analyze:"""
                 long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
                 
                 if match:
-                    if DEBUG_MODE:
-                        st.write(f"**DEBUG: Successfully matched bearing text: '{bearing_text}'**")
-                        groups = match.groups()
-                        st.write(f"**DEBUG: Regex groups: {groups}**")
-                    
                     groups = match.groups()
+                    if DEBUG_MODE:
+                        with st.expander(f"🔍 DEBUG: Bearing Parse - '{bearing_text}'", expanded=False):
+                            st.write(f"**Successfully matched bearing text**: '{bearing_text}'")
+                            st.write(f"**Regex groups**: {groups}")
+                            st.write(f"**Pattern used**: Standard format")
+                    
                     ns_raw = (groups[0] or '').upper()
                     ew_raw = (groups[4] or '').upper()
 
@@ -253,10 +254,13 @@ Text to analyze:"""
                     current_bearing['original_text'] = bearing_text
                     
                 elif long_match:
-                    if DEBUG_MODE:
-                        st.write(f"**DEBUG: Successfully matched LONG bearing text: '{bearing_text}'**")
-                    
                     groups = long_match.groups()
+                    if DEBUG_MODE:
+                        with st.expander(f"🔍 DEBUG: Bearing Parse - '{bearing_text}'", expanded=False):
+                            st.write(f"**Successfully matched LONG bearing text**: '{bearing_text}'")
+                            st.write(f"**Regex groups**: {groups}")
+                            st.write(f"**Pattern used**: Long format")
+                    
                     current_bearing['cardinal_ns'] = groups[0]  # North or South
                     current_bearing['cardinal_ew'] = groups[4]  # East or West
                     current_bearing['degrees'] = int(groups[1])
@@ -265,8 +269,6 @@ Text to analyze:"""
                     current_bearing['original_text'] = bearing_text
                     
                 else:
-                    if DEBUG_MODE:
-                        st.write(f"**DEBUG: FAILED to match bearing text: '{bearing_text}'**")
                     current_bearing['original_text'] = bearing_text  # Store even if parsing failed
 
             elif line.upper().startswith('DISTANCE:') and current_bearing:
@@ -1317,87 +1319,87 @@ def main():
                         st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
                         st.rerun()
         
-        # Debug Buttons for Test PDFs
-        st.subheader("Debug: Process Test PDFs")
-        col1, col2, col3, col4 = st.columns(4)
+        # Debug Buttons for Test PDFs - Each in its own section
+        if DEBUG_MODE:
+            with st.expander("🧪 DEBUG: combine_SNAPFINGER_TRACT-1_LD.pdf", expanded=False):
+                st.write("Process the first Snapfinger tract test PDF.")
+                if st.button("Process Test PDF 1", use_container_width=True):
+                    with open("combine_SNAPFINGER_TRACT-1_LD.pdf", "rb") as test_pdf_1:
+                        st.session_state.extracted_text = test_pdf_1.read()
+                    with st.spinner('Processing Test PDF 1...'):
+                        bearings = process_pdf(BytesIO(st.session_state.extracted_text))
+                        if bearings:
+                            st.session_state.parsed_bearings = bearings
+                            st.session_state.line_count = len(bearings)
+                            for i, bearing in enumerate(bearings):
+                                st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                            st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 1!")
 
-        with col1:
-            if st.button("Test PDF 1"):
-                with open("combine_SNAPFINGER_TRACT-1_LD.pdf", "rb") as test_pdf_1:
-                    st.session_state.extracted_text = test_pdf_1.read()
-                with st.spinner('Processing Test PDF 1...'):
-                    bearings = process_pdf(BytesIO(st.session_state.extracted_text))
-                    if bearings:
-                        st.session_state.parsed_bearings = bearings
-                        st.session_state.line_count = len(bearings)
-                        for i, bearing in enumerate(bearings):
-                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                        st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 1!")
+            with st.expander("🧪 DEBUG: combine_SNAPFINGER_TRACT-2_LD.pdf", expanded=False):
+                st.write("Process the second Snapfinger tract test PDF.")
+                if st.button("Process Test PDF 2", use_container_width=True):
+                    with open("combine_SNAPFINGER_TRACT-2_LD.pdf", "rb") as test_pdf_2:
+                        st.session_state.extracted_text = test_pdf_2.read()
+                    with st.spinner('Processing Test PDF 2...'):
+                        bearings = process_pdf(BytesIO(st.session_state.extracted_text))
+                        if bearings:
+                            st.session_state.parsed_bearings = bearings
+                            st.session_state.line_count = len(bearings)
+                            for i, bearing in enumerate(bearings):
+                                st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                            st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 2!")
 
-        with col2:
-            if st.button("Test PDF 2"):
-                with open("combine_SNAPFINGER_TRACT-2_LD.pdf", "rb") as test_pdf_2:
-                    st.session_state.extracted_text = test_pdf_2.read()
-                with st.spinner('Processing Test PDF 2...'):
-                    bearings = process_pdf(BytesIO(st.session_state.extracted_text))
-                    if bearings:
-                        st.session_state.parsed_bearings = bearings
-                        st.session_state.line_count = len(bearings)
-                        for i, bearing in enumerate(bearings):
-                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                        st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 2!")
+            with st.expander("🧪 DEBUG: combine_SNAPFINGER_TRACT-3_LD.pdf", expanded=False):
+                st.write("Process the third Snapfinger tract test PDF.")
+                if st.button("Process Test PDF 3", use_container_width=True):
+                    with open("combine_SNAPFINGER_TRACT-3_LD.pdf", "rb") as test_pdf_3:
+                        st.session_state.extracted_text = test_pdf_3.read()
+                    with st.spinner('Processing Test PDF 3...'):
+                        bearings = process_pdf(BytesIO(st.session_state.extracted_text))
+                        if bearings:
+                            st.session_state.parsed_bearings = bearings
+                            st.session_state.line_count = len(bearings)
+                            for i, bearing in enumerate(bearings):
+                                st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                            st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 3!")
 
-        with col3:
-            if st.button("Test PDF 3"):
-                with open("combine_SNAPFINGER_TRACT-3_LD.pdf", "rb") as test_pdf_3:
-                    st.session_state.extracted_text = test_pdf_3.read()
-                with st.spinner('Processing Test PDF 3...'):
-                    bearings = process_pdf(BytesIO(st.session_state.extracted_text))
-                    if bearings:
-                        st.session_state.parsed_bearings = bearings
-                        st.session_state.line_count = len(bearings)
-                        for i, bearing in enumerate(bearings):
-                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                        st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Test PDF 3!")
-
-        with col4:
-            if st.button("Legal Desc PDF"):
-                with open("legal_description_page_63.pdf", "rb") as test_pdf_4:
-                    st.session_state.extracted_text = test_pdf_4.read()
-                with st.spinner('Processing Legal Description PDF...'):
-                    bearings = process_pdf(BytesIO(st.session_state.extracted_text))
-                    if bearings:
-                        st.session_state.parsed_bearings = bearings
-                        st.session_state.line_count = len(bearings)
-                        for i, bearing in enumerate(bearings):
-                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                        st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Legal Description PDF!")
-
-        st.write("Use the buttons above to debug PDF processing.")
+            with st.expander("🧪 DEBUG: legal_description_page_63.pdf", expanded=False):
+                st.write("Process the legal description test PDF (page 63).")
+                if st.button("Process Legal Desc PDF", use_container_width=True):
+                    with open("legal_description_page_63.pdf", "rb") as test_pdf_4:
+                        st.session_state.extracted_text = test_pdf_4.read()
+                    with st.spinner('Processing Legal Description PDF...'):
+                        bearings = process_pdf(BytesIO(st.session_state.extracted_text))
+                        if bearings:
+                            st.session_state.parsed_bearings = bearings
+                            st.session_state.line_count = len(bearings)
+                            for i, bearing in enumerate(bearings):
+                                st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                            st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from Legal Description PDF!")
 
     with col2:
         if st.session_state.pdf_image:
@@ -1405,7 +1407,8 @@ def main():
 
     # GPT Extracted Bearings Section
     if st.session_state.parsed_bearings:
-        st.subheader("🧭 Meets and Bounds extracted from Legal Description (please review)")
+        st.markdown("# 🧭 Meets and Bounds")
+        st.markdown("<small>extracted from Legal Description (please review)</small>", unsafe_allow_html=True)
         
         # Create editable table data with proper structure
         bearing_data = []
