@@ -1318,26 +1318,68 @@ def main():
                         st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
                         st.rerun()
         
-        # Available PDF Files Display
-        st.subheader("📄 Available PDF Files")
+        # Available PDF Files Selector
+        st.subheader("📄 Process Available PDF Files")
         
-        # List available PDFs with sizes
         import glob
         pdf_files = glob.glob("*.pdf")
         
         if pdf_files:
-            for pdf_file in pdf_files:
+            # Create dropdown selector
+            selected_pdf = st.selectbox(
+                "Choose a PDF file to process:",
+                options=pdf_files,
+                index=0
+            )
+            
+            if selected_pdf:
+                # Display file info
                 try:
                     import os
-                    file_size = os.path.getsize(pdf_file)
+                    file_size = os.path.getsize(selected_pdf)
                     file_size_kb = file_size / 1024
                     if file_size_kb > 1024:
                         size_display = f"{file_size_kb/1024:.1f} MB"
                     else:
                         size_display = f"{file_size_kb:.1f} KB"
-                    st.write(f"• `{pdf_file}` ({size_display})")
+                    st.write(f"**Selected**: `{selected_pdf}` ({size_display})")
                 except Exception:
-                    st.write(f"• `{pdf_file}`")
+                    st.write(f"**Selected**: `{selected_pdf}`")
+                
+                # Process button
+                if st.button(f"🔄 Process {selected_pdf}", use_container_width=True, type="primary"):
+                    try:
+                        with open(selected_pdf, "rb") as pdf_file:
+                            file_content = pdf_file.read()
+                        
+                        with st.spinner(f'Processing {selected_pdf}...'):
+                            # Create a BytesIO object to simulate uploaded file
+                            from io import BytesIO
+                            pdf_buffer = BytesIO(file_content)
+                            bearings = process_pdf(pdf_buffer)
+                            
+                            if bearings:
+                                st.session_state.parsed_bearings = bearings
+                                st.session_state.line_count = len(bearings)
+                                
+                                # Populate session state with extracted bearings
+                                for i, bearing in enumerate(bearings):
+                                    st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                    st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                    st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                    st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                    st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                    st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                    st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                
+                                st.session_state.draw_lines_section_expanded = False
+                                st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings from {selected_pdf}!")
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ No bearings found in this PDF.")
+                                
+                    except Exception as e:
+                        st.error(f"❌ Error processing PDF: {str(e)}")
         else:
             st.write("No PDF files found in the project directory.")
 
