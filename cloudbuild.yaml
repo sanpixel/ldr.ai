@@ -28,7 +28,7 @@ steps:
       - '--max-instances'
       - '10'
       - '--set-env-vars'
-      - 'OPENAI_API_KEY=${_OPENAI_API_KEY}'
+      - 'OPENAI_API_KEY=${_OPENAI_API_KEY},GOOGLE_DRIVE_API_KEY=${_GOOGLE_DRIVE_API_KEY}'
       - '--tag'
       - '${_ENV_NAME}'
 
