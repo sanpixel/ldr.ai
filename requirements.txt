@@ -8,3 +8,4 @@ pdf2image
 openai
 reportlab
 python-dotenv
+requests
