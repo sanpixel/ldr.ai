@@ -50,6 +50,7 @@ jobs:
         image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/ldr-ai/${{ env.SERVICE }}:${{ github.sha }}
         env_vars: |
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_DRIVE_API_KEY=${{ secrets.GOOGLE_DRIVE_API_KEY }}
         labels: |
           managed-by=github-actions
           commit-sha=${{ github.sha }}
