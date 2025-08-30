@@ -97,19 +97,34 @@ def list_pdfs_from_google_drive(folder_id):
 def download_pdf_from_google_drive(file_id):
     """Download a PDF file from Google Drive."""
     try:
-        # Use the direct download link
-        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+        # First try: Direct public download URL (works for public files without auth)
+        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         
-        headers = {}
-        if os.environ.get('GOOGLE_DRIVE_API_KEY'):
-            headers['Authorization'] = f"Bearer {os.environ.get('GOOGLE_DRIVE_API_KEY')}"
-        
-        response = requests.get(download_url, headers=headers)
+        response = requests.get(download_url)
         
         if response.status_code == 200:
-            return BytesIO(response.content)
+            # Check if we got the actual PDF file
+            if response.headers.get('content-type', '').startswith('application/pdf'):
+                return BytesIO(response.content)
+            elif len(response.content) > 1000:  # Likely got the PDF even without proper content-type
+                return BytesIO(response.content)
+        
+        # Fallback: Try API method with key parameter (correct way for API key)
+        if os.environ.get('GOOGLE_DRIVE_API_KEY'):
+            api_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media&key={os.environ.get('GOOGLE_DRIVE_API_KEY')}"
+            api_response = requests.get(api_url)
+            
+            if api_response.status_code == 200:
+                return BytesIO(api_response.content)
+            else:
+                st.error(f"Failed to download file: {api_response.status_code}")
+                if api_response.status_code == 403:
+                    st.error("File may not be publicly accessible or API key may be invalid")
+                elif api_response.status_code == 404:
+                    st.error("File not found - it may have been moved or deleted")
+                return None
         else:
-            st.error(f"Failed to download file: {response.status_code}")
+            st.error("No Google Drive API key configured and direct download failed")
             return None
             
     except Exception as e:
