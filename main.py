@@ -279,19 +279,19 @@ Text to analyze:"""
         except Exception as log_error:
             st.warning(f"Could not log reasoning data: {str(log_error)}")
         
-        # Display reasoning in debug mode using expander
+        # Display reasoning in debug mode (no expander to avoid nesting)
         if DEBUG_MODE:
-            with st.expander("🔍 DEBUG: AI Classification Reasoning", expanded=False):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Classification**: {reasoning_data.get('classification', 'Not found')}")
-                    st.write(f"**Confidence**: {reasoning_data.get('confidence', 'Not found')}")
-                    if reasoning_data.get('alternatives'):
-                        st.write(f"**Alternatives**:")
-                        st.text(reasoning_data.get('alternatives'))
-                with col2:
-                    st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
-                    st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
+            st.write("🔍 **DEBUG: AI Classification Reasoning**")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Classification**: {reasoning_data.get('classification', 'Not found')}")
+                st.write(f"**Confidence**: {reasoning_data.get('confidence', 'Not found')}")
+                if reasoning_data.get('alternatives'):
+                    st.write(f"**Alternatives**:")
+                    st.text(reasoning_data.get('alternatives'))
+            with col2:
+                st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
+                st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
         
         # Parse bearings - GPT prompt handles classification, we just extract the data
         bearings = []
@@ -899,42 +899,40 @@ def process_pdf(uploaded_file):
         # Store extracted text in session state
         st.session_state.extracted_text = extracted_text
         
-        # Debug: Show extracted text if debug mode is enabled
-        if DEBUG_MODE:
-            with st.expander("🔍 DEBUG: OCR Extracted Text", expanded=False):
-                st.write(f"**Extracted text length**: {len(extracted_text)} characters")
-                st.text_area("Raw OCR Output", extracted_text, height=200, help="This is the raw text extracted from the PDF using OCR")
-
+        # Store extracted text and processing info in session state for display outside
+        st.session_state.extracted_text = extracted_text
+        st.session_state.processing_messages = []
+        
         # Extract supplemental information first
         if os.environ.get("OPENAI_API_KEY"):
-            st.info("Extracting property information...")
             try:
                 supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
                 if supplemental_info:
                     st.session_state.supplemental_info = supplemental_info
-                    st.success("Successfully extracted property information")
+                    st.session_state.processing_messages.append(("success", "Successfully extracted property information"))
             except Exception as e:
-                st.error(f"Error extracting property information: {str(e)}")
+                st.session_state.processing_messages.append(("error", f"Error extracting property information: {str(e)}"))
 
         # First try GPT extraction for bearings
         if os.environ.get("OPENAI_API_KEY"):
-            st.info("Using GPT to analyze the text for bearings...")
             try:
                 bearings, result_text = extract_bearings_with_gpt(extracted_text)
-                st.write(f"**DEBUG: GPT returned {len(bearings)} bearings**")
+                st.session_state.processing_messages.append(("info", f"GPT returned {len(bearings)} bearings"))
+                
+                # Store the GPT response for debug display
+                st.session_state.gpt_response = result_text
+                
                 if bearings:
+                    st.session_state.processing_messages.append(("success", f"✅ Successfully extracted {len(bearings)} bearings!"))
                     return bearings
                 else:
-                    st.warning("No bearings found")
-                    st.write("**DEBUG: GPT Response:**")
-                    st.write(result_text)
+                    st.session_state.processing_messages.append(("warning", "No bearings found"))
                     return []
             except Exception as e:
-                st.error(f"GPT analysis failed: {str(e)}")
-                st.write(f"GPT Error Details: {str(e)}")
+                st.session_state.processing_messages.append(("error", f"GPT analysis failed: {str(e)}"))
                 return []
         else:
-            st.warning("No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions.")
+            st.session_state.processing_messages.append(("warning", "No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions."))
             return []
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
@@ -1375,6 +1373,33 @@ def main():
     # Main application (shown after intro)
     st.title("Legal Description Reader")
     initialize_session_state()
+    
+    # Custom CSS for all buttons - moved to top so it applies to all buttons
+    st.markdown("""
+    <style>
+    /* Green primary button for all Process PDF buttons */
+    .stButton > button[kind="primary"] {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #218838 !important;
+        border-color: #1e7e34 !important;
+    }
+    
+    /* Light blue secondary button for other buttons */
+    .stButton > button[kind="secondary"] {
+        background-color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        color: white !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background-color: #138496 !important;
+        border-color: #117a8b !important;
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     # Create two columns for the main layout
     col1, col2 = st.columns([2, 1])
@@ -1384,7 +1409,7 @@ def main():
         st.subheader("Upload PDF")
         uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'])
         if uploaded_file is not None:
-            if st.button("Process PDF"):
+            if st.button("Process PDF", type="primary"):
                 with st.spinner('Processing PDF...'):
                     bearings = process_pdf(uploaded_file)
                     if bearings:
@@ -1407,7 +1432,10 @@ def main():
         import glob
         pdf_files = glob.glob("*.pdf")
         
-        with st.expander(f"📄 Process Available PDF Files ({len(pdf_files)} local + cloud)", expanded=False):
+        # Check if we should keep the expander open (during processing)
+        expander_open = st.session_state.get('processing_pdf', False)
+        
+        with st.expander(f"📄 Example PDFs ", expanded=expander_open):
             # Create tabs for different sources
             tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
             
@@ -1472,9 +1500,6 @@ def main():
                     st.info("No PDF files found in the project directory.")
             
             with tab2:
-                st.markdown("**Connect to Google Drive**")
-                st.caption("Paste a public Google Drive folder share link to access PDFs")
-                
                 # Input for Google Drive folder link
                 drive_link = st.text_input(
                     "Google Drive folder share link:",
@@ -1560,6 +1585,31 @@ def main():
         if st.session_state.pdf_image:
             st.image(st.session_state.pdf_image, caption='PDF Preview', width=250)
 
+    # Display processing messages if available (from PDF processing)
+    if hasattr(st.session_state, 'processing_messages') and st.session_state.processing_messages:
+        for msg_type, msg_text in st.session_state.processing_messages:
+            if msg_type == "success":
+                st.success(msg_text)
+            elif msg_type == "error":
+                st.error(msg_text)
+            elif msg_type == "warning":
+                st.warning(msg_text)
+            elif msg_type == "info":
+                st.info(msg_text)
+        # Clear messages after displaying
+        st.session_state.processing_messages = []
+    
+    # Display debug info if available
+    if DEBUG_MODE and hasattr(st.session_state, 'extracted_text') and st.session_state.extracted_text:
+        with st.expander("🔍 DEBUG: OCR Extracted Text", expanded=False):
+            st.write(f"**Extracted text length**: {len(st.session_state.extracted_text)} characters")
+            st.text_area("Raw OCR Output", st.session_state.extracted_text, height=200, help="This is the raw text extracted from the PDF using OCR")
+    
+    if DEBUG_MODE and hasattr(st.session_state, 'gpt_response') and st.session_state.gpt_response:
+        with st.expander("🤖 DEBUG: GPT Response", expanded=False):
+            st.write("**GPT Response:**")
+            st.text_area("Full GPT Response", st.session_state.gpt_response, height=300)
+    
     # GPT Extracted Bearings Section
     if st.session_state.parsed_bearings:
         st.markdown("# 🧭 Meets and Bounds")
@@ -1662,33 +1712,6 @@ def main():
         
         # Action buttons for drawing and exporting
         col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-        
-        # Custom CSS for all buttons
-        st.markdown("""
-        <style>
-        /* Green primary button for Draw from GPT Data */
-        .stButton > button[kind="primary"] {
-            background-color: #28a745 !important;
-            border-color: #28a745 !important;
-        }
-        .stButton > button[kind="primary"]:hover {
-            background-color: #218838 !important;
-            border-color: #1e7e34 !important;
-        }
-        
-        /* Light blue secondary button for Populate Input Fields */
-        .stButton > button[kind="secondary"] {
-            background-color: #17a2b8 !important;
-            border-color: #17a2b8 !important;
-            color: white !important;
-        }
-        .stButton > button[kind="secondary"]:hover {
-            background-color: #138496 !important;
-            border-color: #117a8b !important;
-            color: white !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
         
         with col1:
             if st.button("🎯 Draw from GPT Data", use_container_width=True, type="primary"):

@@ -6,6 +6,37 @@ import pandas as pd
 
 st.set_page_config(page_title="Classification Reasoning", layout="wide")
 
+# CSS to make metric text smaller
+st.markdown("""
+<style>
+/* Target all metric containers */
+[data-testid="metric-container"] {
+    font-size: 0.8rem !important;
+}
+[data-testid="metric-container"] * {
+    font-size: inherit !important;
+}
+/* Target metric values (the large numbers/text) */
+[data-testid="metric-container"] > div > div:first-child {
+    font-size: 1.4rem !important;
+}
+/* Target metric labels (the titles) */
+[data-testid="metric-container"] > div > div:last-child {
+    font-size: 0.8rem !important;
+}
+/* Alternative targeting */
+.metric-container {
+    font-size: 0.8rem !important;
+}
+.stMetric > div {
+    font-size: 0.8rem !important;
+}
+.stMetric > div > div {
+    font-size: 0.8rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🧠 AI Classification Reasoning Dashboard")
 st.markdown("Review how the AI classifies legal descriptions and makes decisions")
 
@@ -33,15 +64,46 @@ if os.path.exists(reasoning_file):
                 with col2:
                     if 'classification' in df.columns:
                         most_common = df['classification'].mode().iloc[0] if not df['classification'].mode().empty else "N/A"
-                        st.metric("Most Common Type", most_common)
+                        # Format the classification text to be more readable
+                        if most_common != "N/A":
+                            formatted_common = most_common.replace('_', ' ').title()
+                        else:
+                            formatted_common = "N/A"
+                        st.metric("Most Common Type", formatted_common)
                 with col3:
                     if 'confidence' in df.columns:
-                        high_conf = len(df[df['confidence'] == 'high'])
-                        st.metric("High Confidence", f"{high_conf}/{len(df)}")
+                        # Calculate confidence percentage - handle both 'High' and 'high'
+                        high_conf = len(df[df['confidence'].str.lower() == 'high'])
+                        high_conf_pct = round((high_conf / len(df)) * 100, 1) if len(df) > 0 else 0
+                        st.metric("High Confidence", f"{high_conf_pct}%")
                 with col4:
-                    if 'confidence' in df.columns:
-                        low_conf = len(df[df['confidence'] == 'low'])
-                        st.metric("Low Confidence", f"{low_conf}/{len(df)}")
+                    if 'timestamp' in df.columns:
+                        # Show how many classifications were made today
+                        try:
+                            today = datetime.now().date()
+                            today_count = 0
+                            for _, row in df.iterrows():
+                                try:
+                                    entry_date = datetime.fromisoformat(row['timestamp']).date()
+                                    if entry_date == today:
+                                        today_count += 1
+                                except:
+                                    continue
+                            st.metric("Today's Classifications", today_count)
+                        except:
+                            # Fallback to average confidence if timestamp parsing fails
+                            if 'confidence' in df.columns:
+                                conf_counts = df['confidence'].value_counts()
+                                avg_label = "Avg Confidence"
+                                if 'high' in conf_counts and conf_counts['high'] > len(df) * 0.6:
+                                    avg_value = "High"
+                                elif 'low' in conf_counts and conf_counts['low'] > len(df) * 0.6:
+                                    avg_value = "Low"
+                                else:
+                                    avg_value = "Medium"
+                                st.metric(avg_label, avg_value)
+                            else:
+                                st.metric("Data Available", "✓")
             
             # Detailed View
             st.subheader("🔍 Detailed Classifications")
