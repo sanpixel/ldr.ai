@@ -310,6 +310,8 @@ Text to analyze:"""
         else:
             file_hash = None
         ordered_reasoning_data['file_hash'] = file_hash
+        ordered_reasoning_data['original_filename'] = filename if filename else 'Unknown'  # User's original filename
+        ordered_reasoning_data['storage_path'] = f"temp/{filename}" if filename else None  # Where file is stored
         
         # Add all other fields in their original order
         for key, value in reasoning_data.items():
