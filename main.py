@@ -236,7 +236,7 @@ Text to analyze:"""
 
         result_text = response.choices[0].message.content
         
-        # Parse reasoning data first
+        # Parse reasoning data first - filename comes first for easy identification
         reasoning_data = {
             'filename': filename if filename else 'Unknown',
             'timestamp': datetime.now().isoformat(),
@@ -272,6 +272,10 @@ Text to analyze:"""
         # Handle case where alternatives are at the end
         if collecting_alternatives and alternatives_lines:
             reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
+        
+        # Ensure filename is always present before saving
+        if 'filename' not in reasoning_data:
+            reasoning_data['filename'] = filename if filename else 'Unknown'
         
         # Save reasoning data to database
         try:
