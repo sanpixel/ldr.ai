@@ -1287,6 +1287,35 @@ def show_video_intro():
 def main():
     st.set_page_config(layout="wide", page_title="Legal Description Reader")
     
+    # Import auth utilities
+    try:
+        from utils.auth import get_auth_client, get_current_user, show_user_menu, show_login_button
+        
+        # Handle OAuth callback first
+        auth_client = get_auth_client()
+        callback_user = auth_client.handle_oauth_callback()
+        if callback_user:
+            st.success(f"Welcome, {st.session_state.get('user_name', 'User')}! You're now signed in.")
+            st.rerun()
+        
+        # Get current user (don't require login)
+        user = get_current_user()
+        
+        # Show login at top of main content if not authenticated
+        if not user:
+            show_login_button()
+        
+        # Show user menu in sidebar if authenticated
+        if user:
+            show_user_menu()
+        
+    except ImportError:
+        st.warning("Authentication module not found. Login features disabled.")
+        user = None
+    except Exception as auth_error:
+        st.warning(f"Authentication error: {str(auth_error)}. Login features disabled.")
+        user = None
+    
     # Initialize session state for intro
     if 'show_intro' not in st.session_state:
         st.session_state.show_intro = False  # Disabled for debugging

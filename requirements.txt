@@ -9,3 +9,6 @@ openai
 reportlab
 python-dotenv
 requests
+supabase>=2.0.0
+python-jose[cryptography]
+streamlit-oauth
