@@ -50,12 +50,21 @@ class SupabaseAuth:
             # Store code verifier in session state for later use
             st.session_state.code_verifier = code_verifier
             
+            # Also encode the code verifier in the redirect URL state parameter for persistence
+            import urllib.parse
+            state_data = {
+                "code_verifier": code_verifier,
+                "timestamp": str(int(datetime.now().timestamp()))
+            }
+            state_param = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode().rstrip('=')
+            
             response = self.supabase.auth.sign_in_with_oauth({
                 "provider": provider,
                 "options": {
                     "redirect_to": redirect_to,
                     "code_challenge": code_challenge,
-                    "code_challenge_method": "S256"
+                    "code_challenge_method": "S256",
+                    "state": state_param
                 }
             })
             
@@ -89,9 +98,23 @@ class SupabaseAuth:
                 try:
                     # Use the correct CodeExchangeParams object with code verifier
                     from supabase_auth.types import CodeExchangeParams
+                    import base64
                     
-                    # Get the stored code verifier from session state
+                    # Get the stored code verifier from session state or URL state parameter
                     code_verifier = st.session_state.get('code_verifier')
+                    
+                    # If not in session state, try to get from URL state parameter
+                    if not code_verifier:
+                        state_param = query_params.get('state')
+                        if state_param:
+                            try:
+                                # Decode the state parameter
+                                state_data = json.loads(base64.urlsafe_b64decode(state_param + '==').decode())
+                                code_verifier = state_data.get('code_verifier')
+                                st.info("🔍 DEBUG: Retrieved code verifier from state parameter")
+                            except Exception as state_error:
+                                st.error(f"🚨 Failed to decode state parameter: {str(state_error)}")
+                    
                     if not code_verifier:
                         st.error("🚨 Missing code verifier - please try signing in again")
                         st.query_params.clear()
