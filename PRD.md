@@ -13,6 +13,9 @@ Application: Legal Description Reader - AI-powered property boundary mapping too
 **2025-01-08 20:08 UTC - Warp usage: 2113**
 Current session: Documentation updates - added GitHub Actions deployment strategy and React frontend migration considerations to TODO.md, replaced LDR_PROJECT_DOC.md with comprehensive PRD.md
 
+**2025-08-31 21:04 UTC - Warp usage: 1214**
+Current session: Database integration and metric collection implementation - added auto-processing debug mode, comprehensive DEBUG.md documentation, and preparing to implement 10 easy metrics (file_size, upload_method, bearing_count, debug_mode, processing_time, gpt_model, gpt_temperature, session_id, file_hash, parsing_success_rate) for analytics and ML training data collection
+
 ---
 
 ## 1. Overview

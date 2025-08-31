@@ -152,7 +152,7 @@ def format_bearing_concise(bearing_desc):
         return bearing_desc  # Return original if parsing fails
     return bearing_desc
 
-def extract_bearings_with_gpt(text, filename=None):
+def extract_bearings_with_gpt(text, filename=None, file_size=None):
     """Use GPT to extract bearings from text with a robust, line-by-line parser."""
     try:
         # Load prompt from external file with robust fallback
@@ -288,6 +288,10 @@ Text to analyze:"""
             'filename': filename if filename else 'Unknown',
             'user_email': user_email
         }
+        
+        # Add metrics
+        ordered_reasoning_data['file_size'] = file_size
+        ordered_reasoning_data['debug_mode'] = DEBUG_MODE
         
         # Add all other fields in their original order
         for key, value in reasoning_data.items():
@@ -948,11 +952,13 @@ def process_pdf(uploaded_file):
         # First try GPT extraction for bearings
         if os.environ.get("OPENAI_API_KEY"):
             try:
-                # Get the filename from the uploaded file
+                # Get the filename and file size from the uploaded file
                 filename = getattr(uploaded_file, 'name', 'Uploaded File')
+                file_size = len(uploaded_file.getvalue())
                 if DEBUG_MODE:
                     st.write(f"🔍 DEBUG: Extracted filename: '{filename}' from uploaded file")
-                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename)
+                    st.write(f"🔍 DEBUG: File size: {file_size} bytes")
+                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, file_size)
                 st.info(f"GPT returned {len(bearings)} bearings")
                 
                 # Store the GPT response for debug display
