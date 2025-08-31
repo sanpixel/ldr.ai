@@ -306,22 +306,6 @@ Text to analyze:"""
         
         reasoning_data = ordered_reasoning_data
         
-        if DEBUG_MODE:
-            st.write(f"🔍 DEBUG: After reordering - keys: {list(reasoning_data.keys())}")
-            st.write(f"🔍 DEBUG: Final reasoning_data: {reasoning_data}")
-        
-        # Save reasoning data to database
-        try:
-            from utils.classification import save_classification_data
-            if save_classification_data(reasoning_data):
-                if DEBUG_MODE:
-                    st.success("✅ Classification data saved to database")
-            else:
-                if DEBUG_MODE:
-                    st.warning("⚠️ Failed to save classification data to database")
-        except Exception as log_error:
-            st.warning(f"Could not save reasoning data to database: {str(log_error)}")
-        
         # Display reasoning in debug mode (no expander to avoid nesting)
         if DEBUG_MODE:
             st.write("🔍 **DEBUG: AI Classification Reasoning**")
@@ -417,6 +401,22 @@ Text to analyze:"""
         # Add parsing metrics to reasoning data
         reasoning_data['parsed_bearing_count'] = parsed_count
         reasoning_data['parsing_success_rate'] = parsing_success_rate
+        
+        if DEBUG_MODE:
+            st.write(f"🔍 DEBUG: After adding parsing metrics - keys: {list(reasoning_data.keys())}")
+            st.write(f"🔍 DEBUG: Final reasoning_data: {reasoning_data}")
+        
+        # Save reasoning data to database after all metrics are added
+        try:
+            from utils.classification import save_classification_data
+            if save_classification_data(reasoning_data):
+                if DEBUG_MODE:
+                    st.success("✅ Classification data saved to database")
+            else:
+                if DEBUG_MODE:
+                    st.warning("⚠️ Failed to save classification data to database")
+        except Exception as log_error:
+            st.warning(f"Could not save reasoning data to database: {str(log_error)}")
         
         if DEBUG_MODE:
             classification = reasoning_data.get('classification', 'Unknown')
