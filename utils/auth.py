@@ -39,32 +39,10 @@ class SupabaseAuth:
             else:
                 redirect_to = "http://localhost:5000"
             
-            # Generate and store code verifier for PKCE
-            import secrets
-            import base64
-            import hashlib
-            
-            code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip('=')
-            code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
-            
-            # Store code verifier in session state for later use
-            st.session_state.code_verifier = code_verifier
-            
-            # Also encode the code verifier in the redirect URL state parameter for persistence
-            import urllib.parse
-            state_data = {
-                "code_verifier": code_verifier,
-                "timestamp": str(int(datetime.now().timestamp()))
-            }
-            state_param = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode().rstrip('=')
-            
             response = self.supabase.auth.sign_in_with_oauth({
                 "provider": provider,
                 "options": {
-                    "redirect_to": redirect_to,
-                    "code_challenge": code_challenge,
-                    "code_challenge_method": "S256",
-                    "state": state_param
+                    "redirect_to": redirect_to
                 }
             })
             
@@ -80,93 +58,47 @@ class SupabaseAuth:
             # Get URL parameters from Streamlit
             query_params = st.query_params
             
-            # Debug: Show what parameters we received
-            if query_params:
-                st.info(f"🔍 DEBUG: Received OAuth callback with parameters: {list(query_params.keys())}")
-            
-            # Check for authorization code (standard OAuth flow)
-            auth_code = query_params.get('code')
-            
-            if auth_code:
-                st.info(f"🔄 Processing OAuth authorization code...")
+            # Check if we have OAuth callback parameters
+            if query_params and ('code' in query_params or 'access_token' in query_params):
+                # Construct the full callback URL
+                import urllib.parse
                 
-                # Debug API key
-                api_key_preview = self.supabase_anon_key[:20] + "..." if self.supabase_anon_key else "None"
-                st.info(f"🔍 DEBUG: Using API key: {api_key_preview}")
-                st.info(f"🔍 DEBUG: Supabase URL: {self.supabase_url}")
+                # Determine base URL based on environment
+                if os.getenv("ENVIRONMENT") == "production":
+                    base_url = os.getenv("APP_URL", "https://ldr.clocknumbers.com")
+                else:
+                    base_url = "http://localhost:5000"
+                
+                # Build the full callback URL with parameters
+                params = urllib.parse.urlencode(dict(query_params))
+                callback_url = f"{base_url}?{params}"
+                
+                st.info(f"🔄 Processing OAuth callback with Supabase...")
                 
                 try:
-                    # Use the correct CodeExchangeParams object with code verifier
-                    from supabase_auth.types import CodeExchangeParams
-                    import base64
+                    # Use Supabase's built-in method to handle the OAuth callback
+                    self.supabase.auth.initialize_from_url(callback_url)
                     
-                    # Get the stored code verifier from session state or URL state parameter
-                    code_verifier = st.session_state.get('code_verifier')
+                    # Get the session after initialization
+                    response = self.supabase.auth.get_session()
                     
-                    # If not in session state, try to get from URL state parameter
-                    if not code_verifier:
-                        state_param = query_params.get('state')
-                        if state_param:
-                            try:
-                                # Decode the state parameter
-                                state_data = json.loads(base64.urlsafe_b64decode(state_param + '==').decode())
-                                code_verifier = state_data.get('code_verifier')
-                                st.info("🔍 DEBUG: Retrieved code verifier from state parameter")
-                            except Exception as state_error:
-                                st.error(f"🚨 Failed to decode state parameter: {str(state_error)}")
-                    
-                    if not code_verifier:
-                        st.error("🚨 Missing code verifier - please try signing in again")
+                    if response and hasattr(response, 'user') and response.user:
+                        self.store_user_session(response.user, response)
+                        st.success(f"🎉 Welcome! Successfully signed in as {response.user.email}")
+                        # Clear URL parameters to clean up URL
+                        st.query_params.clear()
+                        return response.user
+                    else:
+                        st.warning("OAuth completed but no user session found")
                         st.query_params.clear()
                         return None
-                    
-                    code_params = CodeExchangeParams(
-                        auth_code=auth_code,
-                        code_verifier=code_verifier
-                    )
-                    
-                    response = self.supabase.auth.exchange_code_for_session(code_params)
-                    st.success("✅ Successfully exchanged code for session")
-                    
-                    # Clean up the code verifier
-                    if 'code_verifier' in st.session_state:
-                        del st.session_state['code_verifier']
-                    
-                except Exception as exchange_error:
-                    st.error(f"🚨 Code exchange failed: {str(exchange_error)}")
-                    st.error(f"🚨 Error type: {type(exchange_error).__name__}")
-                    # Clear params and return None to stop processing
+                        
+                except Exception as callback_error:
+                    st.error(f"🚨 OAuth callback failed: {str(callback_error)}")
                     st.query_params.clear()
                     return None
-                
-                if hasattr(response, 'user') and response.user:
-                    session = getattr(response, 'session', None)
-                    self.store_user_session(response.user, session)
-                    st.success(f"🎉 Welcome! Successfully signed in as {response.user.email}")
-                    # Clear URL parameters to clean up URL
-                    st.query_params.clear()
-                    return response.user
-                else:
-                    st.warning("OAuth exchange completed but no user data received")
-                    st.query_params.clear()
             
-            # Fallback: Check for direct token parameters (if using implicit flow)
-            access_token = query_params.get('access_token')
-            refresh_token = query_params.get('refresh_token')
-            
-            if access_token and refresh_token:
-                st.info("🔄 Processing direct tokens...")
-                # Set session with tokens
-                response = self.supabase.auth.set_session(access_token, refresh_token)
-                
-                if response.user:
-                    self.store_user_session(response.user, response.session)
-                    st.success(f"🎉 Welcome! Successfully signed in as {response.user.email}")
-                    # Clear URL parameters to clean up URL
-                    st.query_params.clear()
-                    return response.user
-            
-            # Check for any other OAuth parameters we might have missed
+            # Check for OAuth errors
             error_param = query_params.get('error')
             if error_param:
                 st.error(f"OAuth error: {error_param}")
@@ -174,12 +106,7 @@ class SupabaseAuth:
                 st.error(f"Error description: {error_description}")
                 st.query_params.clear()
                 return None
-            
-            # If we have unrecognized parameters, clear them
-            if query_params and not auth_code and not access_token:
-                st.info("🧹 Cleaning up unrecognized URL parameters")
-                st.query_params.clear()
-                    
+                
             return None
             
         except Exception as e:
