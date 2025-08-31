@@ -914,30 +914,30 @@ def process_pdf(uploaded_file):
                 supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
                 if supplemental_info:
                     st.session_state.supplemental_info = supplemental_info
-                    st.session_state.processing_messages.append(("success", "Successfully extracted property information"))
+                    st.success("Successfully extracted property information")
             except Exception as e:
-                st.session_state.processing_messages.append(("error", f"Error extracting property information: {str(e)}"))
+                st.error(f"Error extracting property information: {str(e)}")
 
         # First try GPT extraction for bearings
         if os.environ.get("OPENAI_API_KEY"):
             try:
                 bearings, result_text = extract_bearings_with_gpt(extracted_text)
-                st.session_state.processing_messages.append(("info", f"GPT returned {len(bearings)} bearings"))
+                st.info(f"GPT returned {len(bearings)} bearings")
                 
                 # Store the GPT response for debug display
                 st.session_state.gpt_response = result_text
                 
                 if bearings:
-                    st.session_state.processing_messages.append(("success", f"✅ Successfully extracted {len(bearings)} bearings!"))
+                    st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
                     return bearings
                 else:
-                    st.session_state.processing_messages.append(("warning", "No bearings found"))
+                    st.warning("No bearings found")
                     return []
             except Exception as e:
-                st.session_state.processing_messages.append(("error", f"GPT analysis failed: {str(e)}"))
+                st.error(f"GPT analysis failed: {str(e)}")
                 return []
         else:
-            st.session_state.processing_messages.append(("warning", "No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions."))
+            st.warning("No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions.")
             return []
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
@@ -1477,7 +1477,6 @@ def main():
                     
                     st.session_state.draw_lines_section_expanded = False
                     st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
-                    st.rerun()
         
         # Available PDF Files Selector
         import glob
