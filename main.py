@@ -272,12 +272,17 @@ Text to analyze:"""
         if collecting_alternatives and alternatives_lines:
             reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
         
-        # Log reasoning data to file
+        # Save reasoning data to database
         try:
-            with open('classification_reasoning.json', 'a', encoding='utf-8') as f:
-                f.write(json.dumps(reasoning_data) + '\n')
+            from utils.classification import save_classification_data
+            if save_classification_data(reasoning_data):
+                if DEBUG_MODE:
+                    st.success("✅ Classification data saved to database")
+            else:
+                if DEBUG_MODE:
+                    st.warning("⚠️ Failed to save classification data to database")
         except Exception as log_error:
-            st.warning(f"Could not log reasoning data: {str(log_error)}")
+            st.warning(f"Could not save reasoning data to database: {str(log_error)}")
         
         # Display reasoning in debug mode (no expander to avoid nesting)
         if DEBUG_MODE:
