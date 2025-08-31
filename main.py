@@ -301,6 +301,15 @@ Text to analyze:"""
         ordered_reasoning_data['bearing_count'] = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
         ordered_reasoning_data['ocr_confidence'] = 0.85  # Placeholder - OCR libraries don't always provide confidence scores
         ordered_reasoning_data['model_version'] = "ft:gpt-3.5-turbo-0125:personal:ldr:BEoe3v67"
+        ordered_reasoning_data['supplemental_info_found'] = bool(st.session_state.get('supplemental_info'))  # Boolean: found Land Lot/County data?
+        
+        # Calculate file hash for duplicate detection
+        import hashlib
+        if text:
+            file_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
+        else:
+            file_hash = None
+        ordered_reasoning_data['file_hash'] = file_hash
         
         # Add all other fields in their original order
         for key, value in reasoning_data.items():
