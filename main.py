@@ -236,9 +236,8 @@ Text to analyze:"""
 
         result_text = response.choices[0].message.content
         
-        # Parse reasoning data first - filename comes first for easy identification
+        # Parse reasoning data - will add filename first at the end
         reasoning_data = {
-            'filename': filename if filename else 'Unknown',
             'timestamp': datetime.now().isoformat(),
             'input_text': text[:1000],  # First 1000 chars for logging
             'full_response': result_text
@@ -273,9 +272,8 @@ Text to analyze:"""
         if collecting_alternatives and alternatives_lines:
             reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
         
-        # Ensure filename is always present before saving
-        if 'filename' not in reasoning_data:
-            reasoning_data['filename'] = filename if filename else 'Unknown'
+        # Add filename first to ensure it appears first in JSON
+        reasoning_data = {'filename': filename if filename else 'Unknown', **reasoning_data}
         
         # Save reasoning data to database
         try:

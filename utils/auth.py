@@ -130,25 +130,91 @@ def show_logout():
 
 
 def show_user_menu():
-    """Display user info and logout option in sidebar"""
+    """Display clean Google-style user button in sidebar"""
     user = st.session_state.get('user')
     
     if user:
         with st.sidebar:
             st.markdown("---")
-            st.markdown("### 👤 Account")
             
-            # User avatar and info
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                if user.get('avatar_url'):
-                    st.image(user['avatar_url'], width=40)
-                else:
-                    st.markdown("👤")
+            # Custom CSS for Google-style user button
+            st.markdown("""
+            <style>
+            .user-button {
+                display: flex;
+                align-items: center;
+                background-color: #fff;
+                border: 1px solid #dadce0;
+                border-radius: 20px;
+                color: #3c4043;
+                font-family: "Google Sans", arial, sans-serif;
+                font-size: 14px;
+                font-weight: 500;
+                padding: 8px 12px;
+                margin: 8px 0;
+                box-shadow: 0 1px 2px 0 rgba(60,64,67,.30), 0 1px 3px 1px rgba(60,64,67,.15);
+                width: 100%;
+                gap: 8px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .user-button:hover {
+                background-color: #f8f9fa;
+            }
+            .user-avatar {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background-color: #1a73e8;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            .user-info {
+                flex: 1;
+                overflow: hidden;
+            }
+            .user-name {
+                font-weight: 500;
+                color: #3c4043;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .user-email {
+                font-size: 12px;
+                color: #5f6368;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            </style>
+            """, unsafe_allow_html=True)
             
-            with col2:
-                st.write(f"**{user.get('full_name', 'User')}**")
-                st.caption(user.get('email', ''))
+            # User button display
+            user_name = user.get('full_name', 'User')
+            user_email = user.get('email', '')
+            avatar_url = user.get('avatar_url')
+            
+            if avatar_url:
+                avatar_html = f'<img src="{avatar_url}" class="user-avatar" alt="Avatar">'
+            else:
+                # Use initials as fallback
+                initials = ''.join([name[0].upper() for name in user_name.split()[:2]])
+                avatar_html = f'<div class="user-avatar">{initials}</div>'
+            
+            st.markdown(f"""
+            <div class="user-button">
+                {avatar_html}
+                <div class="user-info">
+                    <div class="user-name">{user_name}</div>
+                    <div class="user-email">{user_email}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
             show_logout()
 
