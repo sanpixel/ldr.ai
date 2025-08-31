@@ -1461,23 +1461,23 @@ def main():
         uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'])
         if uploaded_file is not None:
             if st.button("Process PDF", type="primary"):
-                with st.spinner('Processing PDF...'):
-                    bearings = process_pdf(uploaded_file)
-                    if bearings:
-                        st.session_state.parsed_bearings = bearings
-                        st.session_state.line_count = len(bearings)
-                        for i, bearing in enumerate(bearings):
-                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                        
-                        st.session_state.draw_lines_section_expanded = False
-                        st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
-                        st.rerun()
+                st.info("🔄 Processing PDF...")
+                bearings = process_pdf(uploaded_file)
+                if bearings:
+                    st.session_state.parsed_bearings = bearings
+                    st.session_state.line_count = len(bearings)
+                    for i, bearing in enumerate(bearings):
+                        st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                        st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                        st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                        st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                        st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                        st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                        st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                    
+                    st.session_state.draw_lines_section_expanded = False
+                    st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
+                    st.rerun()
         
         # Available PDF Files Selector
         import glob
