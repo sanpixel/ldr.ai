@@ -24,6 +24,7 @@ from pdf2image import convert_from_path
 import re
 import tempfile
 import os
+import glob
 from openai import OpenAI
 import json
 import io
@@ -312,6 +313,43 @@ Text to analyze:"""
         ordered_reasoning_data['file_hash'] = file_hash
         ordered_reasoning_data['original_filename'] = filename if filename else 'Unknown'  # User's original filename
         ordered_reasoning_data['storage_path'] = f"temp/{filename}" if filename else None  # Where file is stored
+        
+        # Determine upload method based on context
+        if hasattr(st.session_state, 'drive_files') and st.session_state.drive_files:
+            upload_method = "google_drive"
+        elif filename and any(pdf_file == filename for pdf_file in glob.glob("*.pdf")):
+            upload_method = "local_file"
+        else:
+            upload_method = "file_upload"
+        ordered_reasoning_data['upload_method'] = upload_method  # How file was uploaded
+        
+        # Generate session ID for tracking
+        import uuid
+        if 'session_id' not in st.session_state:
+            st.session_state.session_id = str(uuid.uuid4())
+        ordered_reasoning_data['session_id'] = st.session_state.session_id  # Browser session tracking
+        
+        # Get user IP address (from Streamlit context)
+        try:
+            import streamlit.web.server.websocket_headers as ws_headers
+            ip_address = ws_headers.get_websocket_headers().get('X-Forwarded-For', 'Unknown')
+        except:
+            ip_address = 'Unknown'
+        ordered_reasoning_data['ip_address'] = ip_address  # User's IP for analytics
+        
+        # Get user agent from browser
+        try:
+            user_agent = st.context.headers.get('User-Agent', 'Unknown')
+        except:
+            user_agent = 'Unknown'
+        ordered_reasoning_data['user_agent'] = user_agent  # Browser info
+        
+        # Track which prompt version was used
+        ordered_reasoning_data['prompt_version'] = 'bearings_prompt.txt'  # Which prompt template was used
+        
+        # GPT settings used
+        ordered_reasoning_data['temperature'] = 0.1  # GPT temperature setting
+        ordered_reasoning_data['max_tokens'] = None  # Token limits (None = default)
         
         # Add all other fields in their original order
         for key, value in reasoning_data.items():
