@@ -1479,19 +1479,17 @@ def main():
                         st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
                         st.rerun()
         
-        # Available PDF Files Selector (Collapsible)
+        # Available PDF Files Selector
         import glob
         pdf_files = glob.glob("*.pdf")
         
-        # Check if we should keep the expander open (during processing)
-        expander_open = st.session_state.get('processing_pdf', False)
+        st.subheader("📄 Example PDFs")
         
-        with st.expander(f"📄 Example PDFs ", expanded=expander_open):
-            # Create tabs for different sources
-            tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
-            
-            with tab1:
-                if pdf_files:
+        # Create tabs for different sources
+        tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
+        
+        with tab1:
+            if pdf_files:
                     # Create dropdown selector
                     selected_pdf = st.selectbox(
                         "Choose a PDF file to process:",
