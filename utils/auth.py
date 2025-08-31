@@ -1,119 +1,156 @@
 """
-Supabase Authentication helper module
-Handles OAuth login, user sessions, and authentication checks
+Supabase Authentication helper module using local storage
+Based on working example: https://github.com/bhargavmodak/streamlit-google-oauth
 """
 
 import os
 import streamlit as st
+import time
 from typing import Optional, Dict, Any
 from supabase import create_client, Client
-from datetime import datetime
-import json
+from utils.st_local_storage import StLocalStorage
+
+try:
+    from streamlit_js import st_js
+except ImportError:
+    st.error("Please install streamlit-js: pip install streamlit-js")
+    st.stop()
+
+# Local storage instance
+st_ls = StLocalStorage()
+
+# Global Supabase client
+url = os.getenv("SUPABASE_URL", "https://xvlzjyjqqgfpcxqnplds.supabase.co")
+key = os.getenv("SUPABASE_ANON_KEY")
+
+if not key:
+    st.error("Missing SUPABASE_ANON_KEY environment variable. Please add it to your .env file or GitHub secrets.")
+    st.stop()
+
+try:
+    supabase: Client = create_client(url, key)
+except Exception as e:
+    st.error(f"Failed to initialize Supabase client: {str(e)}")
+    st.stop()
 
 
-class SupabaseAuth:
-    """Handles Supabase OAuth authentication and session management"""
-    
-    def __init__(self):
-        """Initialize Supabase client"""
-        # Use environment variables with fallbacks
-        self.supabase_url = os.getenv("SUPABASE_URL", "https://xvlzjyjqqgfpcxqnplds.supabase.co")
-        self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+def nav_to(url):
+    """Navigate to URL in new tab"""
+    js = f'window.open("{url}", "_blank");'
+    st_js(js, key="nav_to")
+
+
+def get_oauth_url(provider: str = "google") -> str:
+    """Get OAuth authorization URL for specified provider"""
+    try:
+        # Determine redirect URL based on environment
+        if os.getenv("ENVIRONMENT") == "production":
+            redirect_to = os.getenv("APP_URL", "https://ldr.clocknumbers.com")
+        else:
+            redirect_to = "http://localhost:5000"
         
-        if not self.supabase_anon_key:
-            st.error("Missing SUPABASE_ANON_KEY environment variable. Please add it to your .env file or GitHub secrets.")
-            st.stop()
+        response = supabase.auth.sign_in_with_oauth({
+            "provider": provider,
+            "options": {"redirect_to": redirect_to}
+        })
         
+        return response.url
+        
+    except Exception as e:
+        st.error(f"Failed to get OAuth URL: {str(e)}")
+        return None
+
+
+def show_login():
+    """Show login button"""
+    st.info("A new tab will open to authenticate with Google. Please close the authentication tab after logging in.")
+    login_button = st.button("🟢 Login with Google", type="primary")
+    if login_button:
+        url = get_oauth_url("google")
+        if url:
+            nav_to(url)
+
+
+def authenticate_user(g_session: dict):
+    """Authenticate user with stored session tokens"""
+    if g_session is not None:
+        access_token = g_session["access_token"]
+        refresh_token = g_session["refresh_token"]
         try:
-            self.supabase: Client = create_client(self.supabase_url, self.supabase_anon_key)
+            response = supabase.auth.set_session(
+                access_token=access_token, refresh_token=refresh_token
+            )
+            return response
         except Exception as e:
-            st.error(f"Failed to initialize Supabase client: {str(e)}")
-            st.stop()
-    
-    def get_oauth_url(self, provider: str = "google") -> str:
-        """Get OAuth authorization URL for specified provider"""
-        try:
-            # Determine redirect URL based on environment
-            if os.getenv("ENVIRONMENT") == "production":
-                redirect_to = os.getenv("APP_URL", "https://ldr.clocknumbers.com")
-            else:
-                redirect_to = "http://localhost:5000"
-            
-            response = self.supabase.auth.sign_in_with_oauth({
-                "provider": provider,
-                "options": {
-                    "redirect_to": redirect_to
-                }
-            })
-            
-            return response.url
-            
-        except Exception as e:
-            st.error(f"Failed to get OAuth URL: {str(e)}")
-            return None
-    
-    def handle_oauth_callback(self) -> Optional[Dict[str, Any]]:
-        """Handle OAuth callback from URL parameters"""
-        try:
-            # Get URL parameters from Streamlit
-            query_params = st.query_params
-            
-            # Check if we have OAuth callback parameters
-            if query_params and ('code' in query_params or 'access_token' in query_params):
-                # Construct the full callback URL
-                import urllib.parse
-                
-                # Determine base URL based on environment
-                if os.getenv("ENVIRONMENT") == "production":
-                    base_url = os.getenv("APP_URL", "https://ldr.clocknumbers.com")
+            if type(e).__name__ == "AuthApiError":
+                if "Invalid Refresh Token" in str(e):
+                    st.error("The refresh token was already used. Please login again.")
+                elif "User from sub claim in JWT does not exist" in str(e):
+                    st.error("The access token was invalid. Please login again.")
                 else:
-                    base_url = "http://localhost:5000"
-                
-                # Build the full callback URL with parameters
-                params = urllib.parse.urlencode(dict(query_params))
-                callback_url = f"{base_url}?{params}"
-                
-                st.info(f"🔄 Processing OAuth callback with Supabase...")
-                
-                try:
-                    # Use Supabase's built-in method to handle the OAuth callback
-                    self.supabase.auth.initialize_from_url(callback_url)
-                    
-                    # Get the session after initialization
-                    response = self.supabase.auth.get_session()
-                    
-                    if response and hasattr(response, 'user') and response.user:
-                        self.store_user_session(response.user, response)
-                        st.success(f"🎉 Welcome! Successfully signed in as {response.user.email}")
-                        # Clear URL parameters to clean up URL
-                        st.query_params.clear()
-                        return response.user
-                    else:
-                        st.warning("OAuth completed but no user session found")
-                        st.query_params.clear()
-                        return None
-                        
-                except Exception as callback_error:
-                    st.error(f"🚨 OAuth callback failed: {str(callback_error)}")
-                    st.query_params.clear()
-                    return None
-            
-            # Check for OAuth errors
-            error_param = query_params.get('error')
-            if error_param:
-                st.error(f"OAuth error: {error_param}")
-                error_description = query_params.get('error_description', 'No description provided')
-                st.error(f"Error description: {error_description}")
-                st.query_params.clear()
-                return None
-                
+                    st.error(f"Auth error: {str(e)}")
+                st_ls.delete("g_session")
+                st.info("Logging out...")
+                if "user" in st.session_state:
+                    del st.session_state["user"]
+            else:
+                st.error(f"Authentication error: {str(e)}")
             return None
+    return None
+
+
+def require_authentication():
+    """Main auth function - check cookies and handle login"""
+    if "user" not in st.session_state:
+        with st.spinner("Checking authentication..."):
+            g_session = st_ls.get("g_session")
+            time.sleep(0.5)
+            if g_session is None or len(g_session) == 0:
+                show_login()
+                st.stop()
+            else:
+                response = authenticate_user(g_session)
+                if response is not None and response.user:
+                    st.session_state.user = response.user.user_metadata
+                    st.success(f"Welcome back! Signed in as {response.user.email}")
+                    st.rerun()
+                else:
+                    show_login()
+                    st.stop()
+    return st.session_state.user
+
+
+def show_logout():
+    """Show logout button"""
+    if st.button("🚪 Sign Out", use_container_width=True):
+        st_ls.delete("g_session")
+        st.info("Logging out...")
+        st.session_state.clear()
+        st.rerun()
+
+
+def show_user_menu():
+    """Display user info and logout option in sidebar"""
+    user = st.session_state.get('user')
+    
+    if user:
+        with st.sidebar:
+            st.markdown("---")
+            st.markdown("### 👤 Account")
             
-        except Exception as e:
-            st.error(f"OAuth callback error: {str(e)}")
-            # Clear any problematic query params
-            st.query_params.clear()
-            return None
+            # User avatar and info
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if user.get('avatar_url'):
+                    st.image(user['avatar_url'], width=40)
+                else:
+                    st.markdown("👤")
+            
+            with col2:
+                st.write(f"**{user.get('full_name', 'User')}**")
+                st.caption(user.get('email', ''))
+            
+            show_logout()
     
     def store_user_session(self, user: Dict[str, Any], session: Dict[str, Any]):
         """Store user session in Streamlit session state"""
@@ -179,27 +216,30 @@ class SupabaseAuth:
         st.title("🔐 Legal Description Reader")
         st.markdown("**Welcome!** Please sign in to access your personalized legal description processing tools.")
         
+        st.info("A new tab will open to authenticate with Google. Please close the authentication tab after logging in.")
+        
         # Center the login buttons
         col1, col2, col3 = st.columns([1, 2, 1])
         
         with col2:
             st.markdown("### Sign in with:")
             
-            # Google OAuth link button
+            # Google OAuth button with JavaScript popup
             google_url = self.get_oauth_url("google")
             if google_url:
-                st.link_button("🟢 Continue with Google", google_url, use_container_width=True, type="primary")
+                login_clicked = st.button("🟢 Continue with Google", use_container_width=True, type="primary")
+                if login_clicked:
+                    # Create JavaScript to open OAuth in new tab
+                    oauth_js = f"""
+                    <script>
+                    window.open('{google_url}', 'oauth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+                    </script>
+                    """
+                    st.components.v1.html(oauth_js, height=0)
             else:
                 st.error("Failed to generate Google OAuth URL")
             
             st.markdown("<br>", unsafe_allow_html=True)
-            
-            # GitHub OAuth link button
-            github_url = self.get_oauth_url("github")
-            if github_url:
-                st.link_button("⚪ Continue with GitHub", github_url, use_container_width=True)
-            else:
-                st.error("Failed to generate GitHub OAuth URL")
         
         # App information
         st.markdown("---")
