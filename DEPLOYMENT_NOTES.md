@@ -48,8 +48,48 @@ git reset --hard d3bf195
 git push --force-with-lease origin main
 ```
 
-## Next Steps
-1. Test OAuth authentication locally with port 5000
-2. Update Supabase project settings to allow localhost:5000 redirect
-3. Verify authentication flow works end-to-end
-4. Deploy to Cloud Run once local testing is complete
+## OAuth Implementation Details
+
+### Authentication Flow
+1. **Unauthenticated State**: Shows centered Google sign-in button in main content
+2. **OAuth Process**: 
+   - User clicks "🟢 Sign in with Google" 
+   - Redirects to Google OAuth with proper redirect URL
+   - Returns with authorization code
+   - Code exchanged for session using `CodeExchangeParams`
+3. **Authenticated State**: Google button disappears, user menu appears in sidebar
+
+### Technical Implementation
+- **Library**: Supabase Auth with Python client v2.18.1
+- **Method**: `exchange_code_for_session(CodeExchangeParams(auth_code=code))`
+- **Session Storage**: Streamlit session state with user metadata
+- **Error Handling**: Comprehensive debugging and fallback mechanisms
+
+### Environment Configuration
+```python
+# Local Development
+redirect_to = "http://localhost:5000/"
+
+# Production (when ENVIRONMENT=production)
+redirect_to = os.getenv("APP_URL", "https://ldr.clocknumbers.com/")
+```
+
+### Required Supabase Configuration
+- ✅ Redirect URLs configured: `http://localhost:5000/`, `https://ldr.clocknumbers.com/`
+- ✅ Google OAuth provider enabled
+- ✅ Environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+
+## Deployment Readiness
+- ✅ Code committed and pushed (commit: 39b1bb6)
+- ✅ OAuth redirect URLs configured in Supabase
+- ✅ Environment-aware URL handling
+- ✅ Comprehensive error handling and debugging
+- ✅ Rollback plan documented (Deploy #76, commit d3bf195)
+
+## Testing Status
+- ⚠️ Local OAuth still showing "Invalid API key" error during code exchange
+- ✅ OAuth callback receiving authorization code correctly 
+- ✅ Redirect URL fixed (port 5000)
+- ⚠️ May need Supabase OAuth provider configuration check
+
+**Ready for Cloud Run deployment to test production environment.**
