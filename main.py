@@ -928,6 +928,8 @@ def process_pdf(uploaded_file):
             try:
                 # Get the filename from the uploaded file
                 filename = getattr(uploaded_file, 'name', 'Uploaded File')
+                if DEBUG_MODE:
+                    st.write(f"🔍 DEBUG: Extracted filename: '{filename}' from uploaded file")
                 bearings, result_text = extract_bearings_with_gpt(extracted_text, filename)
                 st.info(f"GPT returned {len(bearings)} bearings")
                 
@@ -1523,6 +1525,8 @@ def main():
                                 # Create a BytesIO object to simulate uploaded file
                                 from io import BytesIO
                                 pdf_buffer = BytesIO(file_content)
+                                # Set the name attribute so we can get the actual filename
+                                pdf_buffer.name = selected_pdf
                                 bearings = process_pdf(pdf_buffer)
                                 
                                 if bearings:
@@ -1640,7 +1644,7 @@ def main():
             pass  # Ignore auth errors in this section
             
         if st.session_state.pdf_image:
-            st.image(st.session_state.pdf_image, caption='PDF Preview', width=250)
+            st.image(st.session_state.pdf_image, caption='PDF Preview', use_container_width=True)
 
     # Display processing messages if available (from PDF processing)
     if hasattr(st.session_state, 'processing_messages') and st.session_state.processing_messages:

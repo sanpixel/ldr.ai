@@ -3,6 +3,11 @@
 ## Next Steps & Ideas
 
 ### 🎯 High Priority
+- [ ] **Fix filename handling and login button formatting**:
+  - Ensure filename field is always preserved in reasoning_data before database save
+  - Put filename first in reasoning_data JSON object for better readability
+  - Update login button to be compact without title for PDF preview section
+
 - [ ] **Calculate closure line**: Calculate the distance and bearing from the end of the last line back to the beginning of line 1 (Point of Beginning)
   - Show closure error (how far off from perfect closure)
   - Display closure bearing and distance
