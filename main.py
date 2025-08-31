@@ -1289,14 +1289,7 @@ def main():
     
     # Import auth utilities
     try:
-        from utils.auth import get_auth_client, get_current_user, show_user_menu, show_login_button
-        
-        # Handle OAuth callback first
-        auth_client = get_auth_client()
-        callback_user = auth_client.handle_oauth_callback()
-        if callback_user:
-            st.success(f"Welcome, {st.session_state.get('user_name', 'User')}! You're now signed in.")
-            st.rerun()
+        from utils.auth import get_current_user, show_user_menu, show_login_button
         
         # Get current user (don't require login)
         user = get_current_user()
