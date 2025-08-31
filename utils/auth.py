@@ -151,146 +151,17 @@ def show_user_menu():
                 st.caption(user.get('email', ''))
             
             show_logout()
-    
-    def store_user_session(self, user: Dict[str, Any], session: Dict[str, Any]):
-        """Store user session in Streamlit session state"""
-        st.session_state.authenticated = True
-        st.session_state.user = user
-        st.session_state.session = session
-        st.session_state.user_id = user.id
-        st.session_state.user_email = user.email
-        st.session_state.user_name = user.user_metadata.get('full_name') or user.user_metadata.get('name') or user.email.split('@')[0]
-        st.session_state.user_avatar = user.user_metadata.get('avatar_url', '')
-    
-    def get_current_user(self) -> Optional[Dict[str, Any]]:
-        """Get current authenticated user"""
-        try:
-            # Check session state first (fast path)
-            if st.session_state.get('authenticated') and st.session_state.get('user'):
-                return st.session_state.user
-            
-            # Try to get user from Supabase (in case of page refresh)
-            response = self.supabase.auth.get_user()
-            if response.user:
-                session = self.supabase.auth.get_session()
-                self.store_user_session(response.user, session)
-                return response.user
-                
-            return None
-            
-        except Exception:
-            return None
-    
-    def logout(self):
-        """Logout user and clear session"""
-        try:
-            self.supabase.auth.sign_out()
-        except Exception:
-            pass
-        
-        # Clear all authentication-related session state
-        auth_keys = ['authenticated', 'user', 'session', 'user_id', 
-                    'user_email', 'user_name', 'user_avatar']
-        for key in auth_keys:
-            if key in st.session_state:
-                del st.session_state[key]
-    
-    def require_auth(self) -> Dict[str, Any]:
-        """Require authentication - show login page if not authenticated"""
-        # First check for OAuth callback
-        user = self.handle_oauth_callback()
-        
-        # If no callback, check existing session
-        if not user:
-            user = self.get_current_user()
-        
-        # If still no user, show login page
-        if not user:
-            self.show_login_page()
-            st.stop()
-            
-        return user
-    
-    def show_login_page(self):
-        """Display OAuth login page"""
-        st.title("🔐 Legal Description Reader")
-        st.markdown("**Welcome!** Please sign in to access your personalized legal description processing tools.")
-        
-        st.info("A new tab will open to authenticate with Google. Please close the authentication tab after logging in.")
-        
-        # Center the login buttons
-        col1, col2, col3 = st.columns([1, 2, 1])
-        
-        with col2:
-            st.markdown("### Sign in with:")
-            
-            # Google OAuth button with JavaScript popup
-            google_url = self.get_oauth_url("google")
-            if google_url:
-                login_clicked = st.button("🟢 Continue with Google", use_container_width=True, type="primary")
-                if login_clicked:
-                    # Create JavaScript to open OAuth in new tab
-                    oauth_js = f"""
-                    <script>
-                    window.open('{google_url}', 'oauth', 'width=500,height=600,scrollbars=yes,resizable=yes');
-                    </script>
-                    """
-                    st.components.v1.html(oauth_js, height=0)
-            else:
-                st.error("Failed to generate Google OAuth URL")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-        
-        # App information
-        st.markdown("---")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### ✨ What You Can Do")
-            st.markdown("""
-            - 📄 **Upload PDF** legal descriptions
-            - 🤖 **AI-powered** bearing extraction
-            - 📊 **Visualize** property boundaries
-            - 📁 **Export** to DXF/PDF formats
-            """)
-        
-        with col2:
-            st.markdown("### 🔒 Secure & Private")
-            st.markdown("""
-            - 🛡️ **Industry-standard** OAuth 2.0
-            - 🔐 **Your data** stays private
-            - 📈 **Track your** processing history
-            - 🌐 **Access anywhere** with your account
-            """)
 
 
-# Convenience functions for easy use throughout the app
-def get_auth_client() -> SupabaseAuth:
-    """Get or create auth client singleton"""
-    if 'auth_client' not in st.session_state:
-        st.session_state.auth_client = SupabaseAuth()
-    return st.session_state.auth_client
-
-
-def require_authentication() -> Dict[str, Any]:
-    """Require authentication - redirect to login if needed"""
-    return get_auth_client().require_auth()
-
-
+# Simplified convenience functions
 def get_current_user() -> Optional[Dict[str, Any]]:
-    """Get current user without requiring authentication"""
-    return get_auth_client().get_current_user()
-
-
-def logout():
-    """Logout current user"""
-    get_auth_client().logout()
+    """Get current user from session state"""
+    return st.session_state.get('user')
 
 
 def get_supabase_client() -> Client:
     """Get the Supabase client for database operations"""
-    return get_auth_client().supabase
+    return supabase
 
 
 def show_login_button():
@@ -337,10 +208,8 @@ def show_login_button():
     col1, col2, col3 = st.columns([2, 1, 2])
     
     with col2:
-        auth_client = get_auth_client()
-        
         # Google OAuth link with custom styling
-        google_url = auth_client.get_oauth_url("google")
+        google_url = get_oauth_url("google")
         if google_url:
             # Custom HTML button that looks like Google's official button
             st.markdown(f"""
@@ -358,28 +227,3 @@ def show_login_button():
             st.error("Failed to generate Google OAuth URL")
 
 
-def show_user_menu():
-    """Display user info and logout option in sidebar"""
-    user = get_current_user()
-    
-    if user:
-        with st.sidebar:
-            st.markdown("---")
-            st.markdown("### 👤 Account")
-            
-            # User avatar and info
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                if st.session_state.get('user_avatar'):
-                    st.image(st.session_state.user_avatar, width=40)
-                else:
-                    st.markdown("👤")
-            
-            with col2:
-                st.write(f"**{st.session_state.get('user_name', 'User')}**")
-                st.caption(st.session_state.get('user_email', ''))
-            
-            # Logout button
-            if st.button("🚪 Sign Out", use_container_width=True):
-                logout()
-                st.rerun()
