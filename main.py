@@ -1490,65 +1490,65 @@ def main():
         
         with tab1:
             if pdf_files:
-                    # Create dropdown selector
-                    selected_pdf = st.selectbox(
-                        "Choose a PDF file to process:",
-                        options=pdf_files,
-                        index=0
-                    )
+                # Create dropdown selector
+                selected_pdf = st.selectbox(
+                    "Choose a PDF file to process:",
+                    options=pdf_files,
+                    index=0
+                )
+                
+                if selected_pdf:
+                    # Display file info with caption
+                    try:
+                        import os
+                        file_size = os.path.getsize(selected_pdf)
+                        file_size_kb = file_size / 1024
+                        if file_size_kb > 1024:
+                            size_display = f"{file_size_kb/1024:.1f} MB"
+                        else:
+                            size_display = f"{file_size_kb:.1f} KB"
+                        st.caption(f"Selected: {selected_pdf} ({size_display})")
+                    except Exception:
+                        st.caption(f"Selected: {selected_pdf}")
                     
-                    if selected_pdf:
-                        # Display file info with caption
+                    # Process button
+                    if st.button(f"🔄 Process {selected_pdf}", use_container_width=True, type="primary"):
                         try:
-                            import os
-                            file_size = os.path.getsize(selected_pdf)
-                            file_size_kb = file_size / 1024
-                            if file_size_kb > 1024:
-                                size_display = f"{file_size_kb/1024:.1f} MB"
-                            else:
-                                size_display = f"{file_size_kb:.1f} KB"
-                            st.caption(f"Selected: {selected_pdf} ({size_display})")
-                        except Exception:
-                            st.caption(f"Selected: {selected_pdf}")
-                        
-                        # Process button
-                        if st.button(f"🔄 Process {selected_pdf}", use_container_width=True, type="primary"):
-                            try:
-                                with open(selected_pdf, "rb") as pdf_file:
-                                    file_content = pdf_file.read()
+                            with open(selected_pdf, "rb") as pdf_file:
+                                file_content = pdf_file.read()
+                            
+                            with st.spinner(f'Processing {selected_pdf}...'):
+                                # Create a BytesIO object to simulate uploaded file
+                                from io import BytesIO
+                                pdf_buffer = BytesIO(file_content)
+                                bearings = process_pdf(pdf_buffer)
                                 
-                                with st.spinner(f'Processing {selected_pdf}...'):
-                                    # Create a BytesIO object to simulate uploaded file
-                                    from io import BytesIO
-                                    pdf_buffer = BytesIO(file_content)
-                                    bearings = process_pdf(pdf_buffer)
+                                if bearings:
+                                    st.session_state.parsed_bearings = bearings
+                                    st.session_state.line_count = len(bearings)
                                     
-                                    if bearings:
-                                        st.session_state.parsed_bearings = bearings
-                                        st.session_state.line_count = len(bearings)
-                                        
-                                        # Populate session state with extracted bearings
-                                        for i, bearing in enumerate(bearings):
-                                            st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                                            st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                                            st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                                            st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                                            st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                                            st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                                            st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                                        
-                                        st.session_state.draw_lines_section_expanded = False
-                                        st.success(f"✅ Extracted {len(bearings)} bearings from {selected_pdf}!")
-                                        st.rerun()
-                                    else:
-                                        st.warning("⚠️ No bearings found.")
-                                        
-                            except Exception as e:
-                                st.error(f"❌ Error: {str(e)}")
-                else:
-                    st.info("No PDF files found in the project directory.")
-            
-            with tab2:
+                                    # Populate session state with extracted bearings
+                                    for i, bearing in enumerate(bearings):
+                                        st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                        st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                        st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                        st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                        st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                        st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                        st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                    
+                                    st.session_state.draw_lines_section_expanded = False
+                                    st.success(f"✅ Extracted {len(bearings)} bearings from {selected_pdf}!")
+                                    st.rerun()
+                                else:
+                                    st.warning("⚠️ No bearings found.")
+                                    
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+            else:
+                st.info("No PDF files found in the project directory.")
+        
+        with tab2:
                 # Input for Google Drive folder link
                 drive_link = st.text_input(
                     "Google Drive folder share link:",
