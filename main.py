@@ -1289,7 +1289,31 @@ def main():
     
     # Import auth utilities
     try:
-        from utils.auth import get_current_user, show_user_menu, show_login_button
+        from utils.auth import get_current_user, show_user_menu, show_login_button, supabase
+        from utils.st_local_storage import StLocalStorage
+        
+        # Handle OAuth callback
+        st_ls = StLocalStorage()
+        query_params = st.query_params
+        
+        if "code" in query_params:
+            try:
+                # Exchange code for session
+                response = supabase.auth.exchange_code_for_session({"auth_code": query_params["code"]})
+                if response.user:
+                    # Store session in local storage
+                    session_data = {
+                        "access_token": response.session.access_token,
+                        "refresh_token": response.session.refresh_token
+                    }
+                    st_ls.set("g_session", session_data)
+                    st.session_state.user = response.user.user_metadata
+                    st.success(f"Welcome! Signed in as {response.user.email}")
+                    # Clear query params and reload
+                    st.query_params.clear()
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Login failed: {str(e)}")
         
         # Get current user (don't require login)
         user = get_current_user()

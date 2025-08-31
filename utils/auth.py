@@ -35,8 +35,8 @@ except Exception as e:
 
 
 def nav_to(url):
-    """Navigate to URL in new tab"""
-    js = f'window.open("{url}", "_blank");'
+    """Navigate to URL in popup window"""
+    js = f'window.open("{url}", "auth_popup", "width=500,height=600,scrollbars=yes,resizable=yes");'
     st_js(js, key="nav_to")
 
 
