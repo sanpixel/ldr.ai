@@ -35,9 +35,9 @@ class SupabaseAuth:
         try:
             # Determine redirect URL based on environment
             if os.getenv("ENVIRONMENT") == "production":
-                redirect_to = os.getenv("APP_URL", "https://ldr.clocknumbers.com/")
+                redirect_to = os.getenv("APP_URL", "https://ldr.clocknumbers.com")
             else:
-                redirect_to = "http://localhost:5000/"
+                redirect_to = "http://localhost:5000"
             
             response = self.supabase.auth.sign_in_with_oauth({
                 "provider": provider,
