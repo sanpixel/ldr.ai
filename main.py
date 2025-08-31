@@ -6,8 +6,11 @@ print("API Key exists:", bool(os.environ.get("OPENAI_API_KEY")))
 
 # Debug Configuration
 DEBUG_MODE = True
+AUTO_PROCESS_DEBUG = True  # Auto-process first PDF for testing data collection
 if DEBUG_MODE:
     print("DEBUG MODE ENABLED")
+if AUTO_PROCESS_DEBUG:
+    print("AUTO-PROCESS DEBUG ENABLED - Will auto-process first local PDF")
 
 import streamlit as st
 import numpy as np
@@ -1513,6 +1516,44 @@ def main():
         
         with tab1:
             if pdf_files:
+                # AUTO-PROCESS first PDF for testing (only when AUTO_PROCESS_DEBUG is enabled)
+                if AUTO_PROCESS_DEBUG and 'auto_processed' not in st.session_state:
+                    st.session_state.auto_processed = True
+                    first_pdf = pdf_files[0]
+                    st.info(f"🤖 AUTO-PROCESSING: {first_pdf} for data collection testing...")
+                    
+                    # Use the same logic as the manual "Process PDF" button
+                    try:
+                        with open(first_pdf, "rb") as pdf_file:
+                            file_content = pdf_file.read()
+                        
+                        with st.spinner(f'AUTO-PROCESSING {first_pdf}...'):
+                            from io import BytesIO
+                            pdf_buffer = BytesIO(file_content)
+                            pdf_buffer.name = first_pdf
+                            bearings = process_pdf(pdf_buffer)
+                            
+                            if bearings:
+                                st.session_state.parsed_bearings = bearings
+                                st.session_state.line_count = len(bearings)
+                                
+                                # Populate session state with extracted bearings
+                                for i, bearing in enumerate(bearings):
+                                    st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                    st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                    st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                    st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                    st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                    st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                    st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                
+                                st.session_state.draw_lines_section_expanded = False
+                                st.success(f"✅ AUTO-PROCESSED: Extracted {len(bearings)} bearings from {first_pdf}!")
+                            else:
+                                st.warning(f"⚠️ AUTO-PROCESS: No bearings found in {first_pdf}")
+                                
+                    except Exception as e:
+                        st.error(f"❌ AUTO-PROCESS ERROR: {str(e)}")
                 # Create dropdown selector
                 selected_pdf = st.selectbox(
                     "Choose a PDF file to process:",
