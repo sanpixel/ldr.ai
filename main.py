@@ -272,8 +272,29 @@ Text to analyze:"""
         if collecting_alternatives and alternatives_lines:
             reasoning_data['alternatives'] = '\n'.join(alternatives_lines)
         
-        # Add filename first to ensure it appears first in JSON
-        reasoning_data = {'filename': filename if filename else 'Unknown', **reasoning_data}
+        # Add filename and user email first to ensure they appear first in JSON
+        user_email = st.session_state.get('user', {}).get('email', 'anonymous')
+        
+        if DEBUG_MODE:
+            st.write(f"🔍 DEBUG: Before reordering - keys: {list(reasoning_data.keys())}")
+            st.write(f"🔍 DEBUG: user_email: '{user_email}'")
+            st.write(f"🔍 DEBUG: filename: '{filename if filename else 'Unknown'}'")
+        
+        # Create new ordered dictionary with filename and user_email first
+        ordered_reasoning_data = {
+            'filename': filename if filename else 'Unknown',
+            'user_email': user_email
+        }
+        
+        # Add all other fields in their original order
+        for key, value in reasoning_data.items():
+            ordered_reasoning_data[key] = value
+        
+        reasoning_data = ordered_reasoning_data
+        
+        if DEBUG_MODE:
+            st.write(f"🔍 DEBUG: After reordering - keys: {list(reasoning_data.keys())}")
+            st.write(f"🔍 DEBUG: Final reasoning_data: {reasoning_data}")
         
         # Save reasoning data to database
         try:
