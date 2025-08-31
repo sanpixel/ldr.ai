@@ -39,11 +39,15 @@ def check_latest_entry():
         debug_mode = reasoning_data.get('debug_mode')
         processing_time = reasoning_data.get('processing_time')
         page_count = reasoning_data.get('page_count')
+        text_length = reasoning_data.get('text_length')
+        bearing_count = reasoning_data.get('bearing_count')
         
         print(f"📏 file_size: {file_size} {'✅' if file_size is not None else '❌'}")
         print(f"🐛 debug_mode: {debug_mode} {'✅' if debug_mode is not None else '❌'}")
         print(f"⏱️ processing_time: {processing_time} {'✅' if processing_time is not None else '❌'}")
         print(f"📄 page_count: {page_count} {'✅' if page_count is not None else '❌'}")
+        print(f"📝 text_length: {text_length} {'✅' if text_length is not None else '❌'}")
+        print(f"🎯 bearing_count: {bearing_count} {'✅' if bearing_count is not None else '❌'}")
         
         # Show all keys in reasoning_data
         print(f"\n📋 All reasoning_data keys: {list(reasoning_data.keys())}")

@@ -297,6 +297,8 @@ Text to analyze:"""
         ordered_reasoning_data['debug_mode'] = DEBUG_MODE
         ordered_reasoning_data['processing_time'] = round(time.time() - processing_start_time, 3)
         ordered_reasoning_data['page_count'] = page_count
+        ordered_reasoning_data['text_length'] = len(text) if text else 0
+        ordered_reasoning_data['bearing_count'] = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
         
         # Add all other fields in their original order
         for key, value in reasoning_data.items():
