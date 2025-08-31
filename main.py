@@ -152,7 +152,7 @@ def format_bearing_concise(bearing_desc):
         return bearing_desc  # Return original if parsing fails
     return bearing_desc
 
-def extract_bearings_with_gpt(text, filename=None, file_size=None, page_count=None):
+def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_count=None, text_length=None, bearing_count=None):
     """Use GPT to extract bearings from text with a robust, line-by-line parser."""
     import time
     processing_start_time = time.time()
@@ -965,7 +965,7 @@ def process_pdf(uploaded_file):
                     st.write(f"🔍 DEBUG: Extracted filename: '{filename}' from uploaded file")
                     st.write(f"🔍 DEBUG: File size: {file_size} bytes")
                     st.write(f"🔍 DEBUG: Page count: {page_count} pages")
-                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, file_size, page_count)
+                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
                 st.info(f"GPT returned {len(bearings)} bearings")
                 
                 # Store the GPT response for debug display

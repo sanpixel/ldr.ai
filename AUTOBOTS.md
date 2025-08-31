@@ -37,7 +37,14 @@
    - Check that new metrics appear in the database entry
    - Ensure values are correct and not null
 
-8. **Check generated columns are working (if needed)**
+8. **If metrics are missing/null - FIX FIRST, then RETEST**
+   - Don't proceed to next metrics if current ones failed
+   - Debug the issue (check parameter passing, function calls, etc.)
+   - Fix the code, commit, push, wait for deployment
+   - Repeat steps 4-7 until metrics show up correctly
+   - Only then proceed to implement next metrics
+
+9. **Check generated columns are working (if needed)**
    - Verify database schema updates are working properly
 
 ## Metrics Implementation Progress:
