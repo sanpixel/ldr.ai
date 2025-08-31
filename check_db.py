@@ -49,6 +49,11 @@ def check_latest_entry():
         print(f"📝 text_length: {text_length} {'✅' if text_length is not None else '❌'}")
         print(f"🎯 bearing_count: {bearing_count} {'✅' if bearing_count is not None else '❌'}")
         
+        parsed_bearing_count = reasoning_data.get('parsed_bearing_count')
+        parsing_success_rate = reasoning_data.get('parsing_success_rate')
+        print(f"📊 parsed_bearing_count: {parsed_bearing_count} {'✅' if parsed_bearing_count is not None else '❌'}")
+        print(f"📈 parsing_success_rate: {parsing_success_rate}% {'✅' if parsing_success_rate is not None else '❌'}")
+        
         # Show all keys in reasoning_data
         print(f"\n📋 All reasoning_data keys: {list(reasoning_data.keys())}")
         

@@ -49,15 +49,15 @@
 
 ## Metrics Implementation Progress:
 
-**Completed (4/21):**
+**Completed (6/21):**
 - ✅ file_size (#10: PDF size in bytes)
 - ✅ debug_mode (#16: Was debug mode enabled?)
 - ✅ processing_time (#1: How long GPT analysis took)
 - ✅ page_count (#2: Number of PDF pages processed)
+- ✅ text_length (#3: Characters extracted via OCR)
+- ✅ bearing_count (#4: Number of bearings found)
 
 **Next Implementation (2 at a time):**
-- [ ] text_length (#3: Characters extracted via OCR)
-- [ ] bearing_count (#4: Number of bearings found)
 - [ ] parsed_bearing_count (#5: Number successfully parsed to coordinates)
 - [ ] parsing_success_rate (#6: % of bearings that parsed correctly)
 - [ ] ocr_confidence (#7: OCR clarity score)

@@ -409,6 +409,15 @@ Text to analyze:"""
         # Return only fully parsed bearings, but let GPT handle the classification logic
         parsed_bearings = [b for b in bearings if 'cardinal_ns' in b]
         
+        # Calculate parsing metrics after we have the results
+        total_bearings = len(bearings)
+        parsed_count = len(parsed_bearings)
+        parsing_success_rate = round((parsed_count / total_bearings * 100) if total_bearings > 0 else 0, 2)
+        
+        # Add parsing metrics to reasoning data
+        reasoning_data['parsed_bearing_count'] = parsed_count
+        reasoning_data['parsing_success_rate'] = parsing_success_rate
+        
         if DEBUG_MODE:
             classification = reasoning_data.get('classification', 'Unknown')
             st.write(f"**DEBUG: Classification: '{classification}' | Found {len(parsed_bearings)} valid bearings**")
