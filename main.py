@@ -251,9 +251,9 @@ Text to analyze:"""
         for line in lines:
             line = line.strip()
             if line.upper().startswith('CLASSIFICATION:'):
-                reasoning_data['classification'] = line.split(':', 1)[1].strip()
+                reasoning_data['classification'] = line.split(':', 1)[1].strip().lower()
             elif line.upper().startswith('CONFIDENCE:'):
-                reasoning_data['confidence'] = line.split(':', 1)[1].strip()
+                reasoning_data['confidence'] = line.split(':', 1)[1].strip().lower()
             elif line.upper().startswith('REASONING:'):
                 reasoning_data['reasoning'] = line.split(':', 1)[1].strip()
             elif line.upper().startswith('EVIDENCE:'):
@@ -1645,8 +1645,7 @@ def main():
                 st.warning(msg_text)
             elif msg_type == "info":
                 st.info(msg_text)
-        # Clear messages after displaying
-        st.session_state.processing_messages = []
+        # Don't clear messages - let them persist until next PDF processing
     
     # Display debug info if available
     if DEBUG_MODE and hasattr(st.session_state, 'extracted_text') and st.session_state.extracted_text:
