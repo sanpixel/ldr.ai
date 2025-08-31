@@ -149,7 +149,7 @@ def format_bearing_concise(bearing_desc):
         return bearing_desc  # Return original if parsing fails
     return bearing_desc
 
-def extract_bearings_with_gpt(text):
+def extract_bearings_with_gpt(text, filename=None):
     """Use GPT to extract bearings from text with a robust, line-by-line parser."""
     try:
         # Load prompt from external file with robust fallback
@@ -238,6 +238,7 @@ Text to analyze:"""
         
         # Parse reasoning data first
         reasoning_data = {
+            'filename': filename if filename else 'Unknown',
             'timestamp': datetime.now().isoformat(),
             'input_text': text[:1000],  # First 1000 chars for logging
             'full_response': result_text
@@ -921,7 +922,9 @@ def process_pdf(uploaded_file):
         # First try GPT extraction for bearings
         if os.environ.get("OPENAI_API_KEY"):
             try:
-                bearings, result_text = extract_bearings_with_gpt(extracted_text)
+                # Get the filename from the uploaded file
+                filename = getattr(uploaded_file, 'name', 'Uploaded File')
+                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename)
                 st.info(f"GPT returned {len(bearings)} bearings")
                 
                 # Store the GPT response for debug display
@@ -1538,7 +1541,6 @@ def main():
                                     
                                     st.session_state.draw_lines_section_expanded = False
                                     st.success(f"✅ Extracted {len(bearings)} bearings from {selected_pdf}!")
-                                    st.rerun()
                                 else:
                                     st.warning("⚠️ No bearings found.")
                                     
