@@ -1326,10 +1326,6 @@ def main():
         # Get current user (don't require login)
         user = get_current_user()
         
-        # Show login at top of main content if not authenticated
-        if not user:
-            show_login_button()
-        
         # Show user menu in sidebar if authenticated
         if user:
             show_user_menu()
@@ -1632,6 +1628,13 @@ def main():
                     """)
 
     with col2:
+        # Show login button if not authenticated
+        try:
+            if not user:
+                show_login_button()
+        except:
+            pass  # Ignore auth errors in this section
+            
         if st.session_state.pdf_image:
             st.image(st.session_state.pdf_image, caption='PDF Preview', width=250)
 
