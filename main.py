@@ -6,7 +6,7 @@ print("API Key exists:", bool(os.environ.get("OPENAI_API_KEY")))
 
 # Debug Configuration
 DEBUG_MODE = True
-AUTO_PROCESS_DEBUG = True  # Auto-process first PDF for testing data collection
+AUTO_PROCESS_DEBUG = False  # Auto-process first PDF for testing data collection
 if DEBUG_MODE:
     print("DEBUG MODE ENABLED")
 if AUTO_PROCESS_DEBUG:
