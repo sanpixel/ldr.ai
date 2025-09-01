@@ -9,8 +9,8 @@ from supabase import create_client
 def check_latest_entry():
     try:
         # Set the keys directly
-        url = "https://xvlzjyjqqgfpcxqnplds.supabase.co"
-        key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bHpqeWpxcWdmcGN4cW5wbGRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDY4MjYwMSwiZXhwIjoyMDcwMjU4NjAxfQ.XaMGGB8_Bb3UEPNwRXSkddHSijkWNDCfJf9NmV0xlHc"
+        url = 
+        key = 
         
         supabase = create_client(url, key)
         
