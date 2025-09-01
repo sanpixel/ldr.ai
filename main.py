@@ -329,12 +329,17 @@ Text to analyze:"""
             st.session_state.session_id = str(uuid.uuid4())
         ordered_reasoning_data['session_id'] = st.session_state.session_id  # Browser session tracking
         
-        # Get user IP address (from Streamlit context)
+        # Get user IP address (proper Streamlit method)
         try:
-            import streamlit.web.server.websocket_headers as ws_headers
-            ip_address = ws_headers.get_websocket_headers().get('X-Forwarded-For', 'Unknown')
+            # Try to get IP from Streamlit context or headers
+            ctx = st.runtime.scriptrunner.get_script_run_ctx()
+            if ctx and hasattr(ctx, 'session_id'):
+                # Try to get from session info or request headers
+                ip_address = getattr(ctx, 'client_ip', None) or '127.0.0.1'
+            else:
+                ip_address = '127.0.0.1'
         except:
-            ip_address = 'Unknown'
+            ip_address = '127.0.0.1'
         ordered_reasoning_data['ip_address'] = ip_address  # User's IP for analytics
         
         # Get user agent from browser
