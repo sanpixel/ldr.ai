@@ -30,7 +30,7 @@
 
 6. **Query database to verify new metrics**
    ```powershell
-   $env:SUPABASE_URL="https://xvlzjyjqqgfpcxqnplds.supabase.co"; $env:SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bHpqeWpxcWdmcGN4cW5wbGRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDY4MjYwMSwiZXhwIjoyMDcwMjU4NjAxfQ.XaMGGB8_Bb3UEPNwRXSkddHSijkWNDCfJf9NmV0xlHc"; python check_db.py
+   # Manually check the database through Supabase dashboard or create your own verification script
    ```
 
 7. **Verify all fields are populated in the reasoning_data JSON**
