@@ -34,7 +34,7 @@ Then extract data based on classification:
 If EXPLICIT_BEARINGS:
 
 then Extract all bearings, distances, and monuments from the following legal description text. 
-     For each line segment found, output in this exact format:
+     For each line segment found, output in this exact format AND NUMBER THEM:
             BEARING: [bearing]
             DISTANCE: [distance]
             MONUMENT: [monument/reference]
@@ -50,6 +50,7 @@ LOT: [lot number]
 BLOCK: [block number]
 SUBDIVISION: [subdivision name]
 PLAT_BOOK: [plat book reference]
+PAGE_NUMBER: [PAGE NUMBER REFERENC]
 SECTION: [section/township/range if applicable]
 
 Text to analyze:
