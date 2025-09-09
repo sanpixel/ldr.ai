@@ -2,7 +2,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-print("API Key exists:", bool(os.environ.get("OPENAI_API_KEY")))
+import json
+
+# Initialize OpenAI key function (needs to be early for the print statement)
+def get_openai_key():
+    # First try environment variable (for online deployment)
+    env_key = os.environ.get("OPENAI_API_KEY")
+    if env_key:
+        return env_key
+    
+    # Fallback to local JSON file (for local development)
+    local_key_file = r"C:\dev\openai-key.json"
+    try:
+        if os.path.exists(local_key_file):
+            with open(local_key_file, 'r') as f:
+                key_data = json.load(f)
+                return key_data.get('api_key')
+    except Exception as e:
+        print(f"Warning: Could not read local key file {local_key_file}: {e}")
+    
+    return None
+
+print("API Key exists:", bool(get_openai_key()))
 
 # Debug Configuration
 DEBUG_MODE = False
@@ -48,7 +69,7 @@ except ImportError:
     pass
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key=get_openai_key())
 
 def extract_folder_id_from_share_link(share_link):
     """Extract Google Drive folder ID from a share link."""
@@ -1010,7 +1031,7 @@ def process_pdf(uploaded_file):
         st.session_state.processing_messages = []
         
         # Extract supplemental information first
-        if os.environ.get("OPENAI_API_KEY"):
+        if get_openai_key():
             try:
                 supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
                 if supplemental_info:
@@ -1020,7 +1041,7 @@ def process_pdf(uploaded_file):
                 st.error(f"Error extracting property information: {str(e)}")
 
         # First try GPT extraction for bearings
-        if os.environ.get("OPENAI_API_KEY"):
+        if get_openai_key():
             try:
                 # Get the filename, file size, and page count from the uploaded file
                 filename = getattr(uploaded_file, 'name', 'Uploaded File')
