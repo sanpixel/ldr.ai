@@ -1771,7 +1771,7 @@ def main():
                                                     st.session_state[f"monument_{i}"] = bearing.get('monument', '')
                                                 
                                                 st.session_state.draw_lines_section_expanded = False
-                                st.success(f"✅ Extracted {len(bearings)} bearings from {selected_drive_file}!")
+                                                st.success(f"✅ Extracted {len(bearings)} bearings from {selected_drive_file}!")
                                             else:
                                                 st.warning("⚠️ No bearings found.")
                                         else:
