@@ -25,8 +25,8 @@ CONFIDENCE: [high|medium|low]
 REASONING: [explain why you chose this classification]
 EVIDENCE: [all of the specific test that supports your decision]
 RANK_ALTERNATIVES:
-  - Second choice: [classification] (reason)
-  - Third choice: [classification] (reason)
+  - Second choice from txt prompt: [classification] (reason)
+  - Third choice from txt prompt: [classification] (reason)
 
             
 Then extract data based on classification:
