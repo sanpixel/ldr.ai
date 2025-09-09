@@ -17,7 +17,7 @@ def get_openai_key():
         if os.path.exists(local_key_file):
             with open(local_key_file, 'r') as f:
                 key_data = json.load(f)
-                return key_data.get('api_key')
+                return key_data.get('OPENAI_API_KEY')
     except Exception as e:
         print(f"Warning: Could not read local key file {local_key_file}: {e}")
     
