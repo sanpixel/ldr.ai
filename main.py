@@ -5,10 +5,8 @@ import os
 print("API Key exists:", bool(os.environ.get("OPENAI_API_KEY")))
 
 # Debug Configuration
-DEBUG_MODE = True
+DEBUG_MODE = False
 AUTO_PROCESS_DEBUG = False  # Auto-process first PDF for testing data collection
-if DEBUG_MODE:
-    print("DEBUG MODE ENABLED")
 if AUTO_PROCESS_DEBUG:
     print("AUTO-PROCESS DEBUG ENABLED - Will auto-process first local PDF")
 
@@ -164,7 +162,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
             with open('bearings_prompt.txt', 'r', encoding='utf-8') as f:
                 prompt_template = f.read().strip()
         except (FileNotFoundError, IOError, PermissionError) as e:
-            if DEBUG_MODE:
+            if st.session_state.get('debug_enabled', False):
                 st.warning(f"🔄 DEBUG: bearings_prompt.txt file not accessible ({str(e)}). Using embedded fallback prompt.")
             # Current working prompt as fallback (embedded for Cloud Run reliability)
             prompt_template = """First classify the legal description type using these criteria:
@@ -282,7 +280,7 @@ Text to analyze:"""
         # Add filename and user email first to ensure they appear first in JSON
         user_email = st.session_state.get('user', {}).get('email', 'anonymous')
         
-        if DEBUG_MODE:
+        if st.session_state.get('debug_enabled', False):
             st.write(f"🔍 DEBUG: Before reordering - keys: {list(reasoning_data.keys())}")
             st.write(f"🔍 DEBUG: user_email: '{user_email}'")
             st.write(f"🔍 DEBUG: filename: '{filename if filename else 'Unknown'}'")
@@ -363,7 +361,7 @@ Text to analyze:"""
         reasoning_data = ordered_reasoning_data
         
         # Display reasoning in debug mode (no expander to avoid nesting)
-        if DEBUG_MODE:
+        if st.session_state.get('debug_enabled', False):
             st.write("🔍 **DEBUG: AI Classification Reasoning**")
             col1, col2 = st.columns(2)
             with col1:
@@ -405,7 +403,7 @@ Text to analyze:"""
                 
                 if match:
                     groups = match.groups()
-                    if DEBUG_MODE:
+                    if st.session_state.get('debug_enabled', False):
                         st.markdown(f"<small>🔍 DEBUG: Successfully matched '{bearing_text}' | Groups: {groups} | Pattern: Standard</small>", unsafe_allow_html=True)
                     
                     ns_raw = (groups[0] or '').upper()
@@ -420,7 +418,7 @@ Text to analyze:"""
                     
                 elif long_match:
                     groups = long_match.groups()
-                    if DEBUG_MODE:
+                    if st.session_state.get('debug_enabled', False):
                         st.markdown(f"<small>🔍 DEBUG: Successfully matched LONG '{bearing_text}' | Groups: {groups} | Pattern: Long</small>", unsafe_allow_html=True)
                     
                     current_bearing['cardinal_ns'] = groups[0]  # North or South
@@ -458,7 +456,7 @@ Text to analyze:"""
         reasoning_data['parsed_bearing_count'] = parsed_count
         reasoning_data['parsing_success_rate'] = parsing_success_rate
         
-        if DEBUG_MODE:
+        if st.session_state.get('debug_enabled', False):
             st.write(f"🔍 DEBUG: After adding parsing metrics - keys: {list(reasoning_data.keys())}")
             st.write(f"🔍 DEBUG: Final reasoning_data: {reasoning_data}")
         
@@ -466,15 +464,15 @@ Text to analyze:"""
         try:
             from utils.classification import save_classification_data
             if save_classification_data(reasoning_data):
-                if DEBUG_MODE:
+                if st.session_state.get('debug_enabled', False):
                     st.success("✅ Classification data saved to database")
             else:
-                if DEBUG_MODE:
+                if st.session_state.get('debug_enabled', False):
                     st.warning("⚠️ Failed to save classification data to database")
         except Exception as log_error:
             st.warning(f"Could not save reasoning data to database: {str(log_error)}")
         
-        if DEBUG_MODE:
+        if st.session_state.get('debug_enabled', False):
             classification = reasoning_data.get('classification', 'Unknown')
             st.write(f"**DEBUG: Classification: '{classification}' | Found {len(parsed_bearings)} valid bearings**")
             
@@ -1028,7 +1026,7 @@ def process_pdf(uploaded_file):
                 filename = getattr(uploaded_file, 'name', 'Uploaded File')
                 file_size = len(uploaded_file.getvalue())
                 page_count = len(images)
-                if DEBUG_MODE:
+                if st.session_state.get('debug_enabled', False):
                     st.write(f"🔍 DEBUG: Extracted filename: '{filename}' from uploaded file")
                     st.write(f"🔍 DEBUG: File size: {file_size} bytes")
                     st.write(f"🔍 DEBUG: Page count: {page_count} pages")
@@ -1530,6 +1528,21 @@ def main():
     
     # Main application (shown after intro)
     st.title("Legal Description Reader")
+    
+    # Debug toggle in sidebar
+    with st.sidebar:
+        st.subheader("Debug Controls")
+        debug_password = st.text_input("Debug Password", type="password", key="debug_pw")
+        if debug_password == "warez":
+            st.session_state.debug_enabled = True
+            st.success("🔍 Debug mode enabled")
+        elif debug_password and debug_password != "warez":
+            st.session_state.debug_enabled = False
+            st.error("❌ Invalid password")
+        
+        if st.session_state.get('debug_enabled', False):
+            st.info("🐛 Debug output active")
+    
     initialize_session_state()
     
     # Custom CSS for all buttons - moved to top so it applies to all buttons
@@ -1758,8 +1771,7 @@ def main():
                                                     st.session_state[f"monument_{i}"] = bearing.get('monument', '')
                                                 
                                                 st.session_state.draw_lines_section_expanded = False
-                                                st.success(f"✅ Extracted {len(bearings)} bearings from {selected_drive_file}!")
-                                                st.rerun()
+                                st.success(f"✅ Extracted {len(bearings)} bearings from {selected_drive_file}!")
                                             else:
                                                 st.warning("⚠️ No bearings found.")
                                         else:
@@ -1800,12 +1812,12 @@ def main():
         # Don't clear messages - let them persist until next PDF processing
     
     # Display debug info if available
-    if DEBUG_MODE and hasattr(st.session_state, 'extracted_text') and st.session_state.extracted_text:
+    if st.session_state.get('debug_enabled', False) and hasattr(st.session_state, 'extracted_text') and st.session_state.extracted_text:
         with st.expander("🔍 DEBUG: OCR Extracted Text", expanded=False):
             st.write(f"**Extracted text length**: {len(st.session_state.extracted_text)} characters")
             st.text_area("Raw OCR Output", st.session_state.extracted_text, height=200, help="This is the raw text extracted from the PDF using OCR")
     
-    if DEBUG_MODE and hasattr(st.session_state, 'gpt_response') and st.session_state.gpt_response:
+    if st.session_state.get('debug_enabled', False) and hasattr(st.session_state, 'gpt_response') and st.session_state.gpt_response:
         with st.expander("🤖 DEBUG: GPT Response", expanded=False):
             st.write("**GPT Response:**")
             st.text_area("Full GPT Response", st.session_state.gpt_response, height=300)
@@ -1919,7 +1931,6 @@ def main():
                 st.session_state.lines = pd.DataFrame(columns=['start_x', 'start_y', 'end_x', 'end_y', 'bearing', 'bearing_desc', 'distance', 'monument'])
                 draw_lines_from_bearings()
                 st.success(f"Drew {len(st.session_state.parsed_bearings)} lines from GPT data!")
-                st.rerun()
         
         with col2:
             if st.button("📝 Populate Input Fields", use_container_width=True, type="secondary"):
@@ -1934,7 +1945,6 @@ def main():
                     st.session_state[f"distance_{i}"] = float(bearing['distance'])
                     st.session_state[f"monument_{i}"] = bearing.get('monument', '')
                 st.success("Input fields populated! Scroll down to review and edit if needed.")
-                st.rerun()
         
         with col3:
             if st.button("📄 Export DXF", use_container_width=True):

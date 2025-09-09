@@ -3,6 +3,11 @@
 ## Next Steps & Ideas
 
 ### 🎯 High Priority
+- [ ] **Fix debug output clearing when drawing lines**:
+  - Debug output from GPT processing gets cleared when clicking 'Draw Lines' because Streamlit reruns to update the plot
+  - Need to modify plotting to update without full rerun - possibly using Plotly's update methods or in-place chart updates
+  - Avoid session state changes that trigger rerun while preserving real-time debug context
+
 - [ ] **Fix filename handling and login button formatting**:
   - Ensure filename field is always preserved in reasoning_data before database save
   - Put filename first in reasoning_data JSON object for better readability
