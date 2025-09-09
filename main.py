@@ -8,19 +8,28 @@ import json
 def get_openai_key():
     # First try environment variable (for online deployment)
     env_key = os.environ.get("OPENAI_API_KEY")
+    print(f"Debug: env_key = {bool(env_key)}")
     if env_key:
         return env_key
     
     # Fallback to local JSON file (for local development)
     local_key_file = r"C:\dev\openai-key.json"
+    print(f"Debug: Checking local file {local_key_file}")
     try:
         if os.path.exists(local_key_file):
+            print(f"Debug: File exists, reading...")
             with open(local_key_file, 'r') as f:
                 key_data = json.load(f)
-                return key_data.get('OPENAI_API_KEY')
+                print(f"Debug: JSON keys = {list(key_data.keys())}")
+                key = key_data.get('OPENAI_API_KEY')
+                print(f"Debug: Found key = {bool(key)}")
+                return key
+        else:
+            print(f"Debug: File does not exist")
     except Exception as e:
         print(f"Warning: Could not read local key file {local_key_file}: {e}")
     
+    print(f"Debug: Returning None")
     return None
 
 print("API Key exists:", bool(get_openai_key()))
@@ -69,7 +78,12 @@ except ImportError:
     pass
 
 # Initialize OpenAI client
-client = OpenAI(api_key=get_openai_key())
+api_key = get_openai_key()
+if not api_key:
+    print("Warning: No OpenAI API key found")
+    client = None
+else:
+    client = OpenAI(api_key=api_key)
 
 def extract_folder_id_from_share_link(share_link):
     """Extract Google Drive folder ID from a share link."""

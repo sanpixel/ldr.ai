@@ -6,6 +6,7 @@ Based on working example: https://github.com/bhargavmodak/streamlit-google-oauth
 import os
 import streamlit as st
 import time
+import json
 from typing import Optional, Dict, Any
 from supabase import create_client, Client
 from utils.st_local_storage import StLocalStorage
@@ -19,9 +20,27 @@ except ImportError:
 # Local storage instance
 st_ls = StLocalStorage()
 
+def get_supabase_key():
+    # First try environment variable (for online deployment)
+    env_key = os.getenv("SUPABASE_ANON_KEY")
+    if env_key:
+        return env_key
+    
+    # Fallback to local JSON file (for local development)
+    local_key_file = r"C:\dev\openai-key.json"
+    try:
+        if os.path.exists(local_key_file):
+            with open(local_key_file, 'r') as f:
+                key_data = json.load(f)
+                return key_data.get('SUPABASE_ANON_KEY')
+    except Exception as e:
+        print(f"Warning: Could not read Supabase key from {local_key_file}: {e}")
+    
+    return None
+
 # Global Supabase client
 url = os.getenv("SUPABASE_URL", "https://xvlzjyjqqgfpcxqnplds.supabase.co")
-key = os.getenv("SUPABASE_ANON_KEY")
+key = get_supabase_key()
 
 if not key:
     st.error("Missing SUPABASE_ANON_KEY environment variable. Please add it to your .env file or GitHub secrets.")
