@@ -636,10 +636,16 @@ def create_dxf():
                 offset_distance = 2.0  # Adjust this value to control dimension text placement
                 offset_x = offset_distance * np.sin(angle)
                 offset_y = -offset_distance * np.cos(angle)
+                
+                # Calculate base point for dimension (offset from line midpoint)
+                mid_x = (start[0] + end[0]) / 2
+                mid_y = (start[1] + end[1]) / 2
+                base_x = mid_x + offset_x
+                base_y = mid_y + offset_y
 
-                # Add dimension with basic parameters
+                # Add dimension with proper base point alignment
                 dim = msp.add_linear_dim(
-                    base=(0, 0),  # Base point for dimension line
+                    base=(base_x, base_y),  # Base point offset from line midpoint
                     p1=start,     # Start point
                     p2=end,       # End point
                     text=f"{row['distance']:.2f}'"  # Distance text
@@ -652,7 +658,7 @@ def create_dxf():
                         msp.add_text(
                             prev_row['monument'],
                             dxfattribs={
-                                "height": 33,
+                                "height": 3,
                                 "insert": (start[0] + 1, start[1] + 1),
                                 "rotation": np.degrees(angle)  # Align text with line
                             }
@@ -1272,14 +1278,21 @@ def export_pdf():
             story.append(Spacer(1, 20))
             story.append(Paragraph("Survey Lines", styles['Heading2']))
 
-            # Create table for bearings
+            # Create table for bearings with word wrapping for monuments
             bearing_data = [["Line", "Bearing", "Distance", "Monument"]]
             for idx, row in st.session_state.lines.iterrows():
+                # Create Paragraph object for monument to enable word wrapping
+                monument_text = row.get('monument', '')
+                if monument_text:
+                    monument_para = Paragraph(monument_text, styles['Normal'])
+                else:
+                    monument_para = ""
+                
                 bearing_data.append([
                     f"Line {idx + 1}",
                     format_bearing_concise(row['bearing_desc']),
                     f"{row['distance']:.2f}'",
-                    row.get('monument', '')
+                    monument_para
                 ])
 
             bearing_table = Table(bearing_data, colWidths=[1*inch, 2*inch, 1.5*inch, 2.5*inch])
@@ -1288,6 +1301,7 @@ def export_pdf():
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to top for better wrapping
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E6E6E6')),  # Light gray background
             ]))
             story.append(bearing_table)
