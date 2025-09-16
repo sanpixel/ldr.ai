@@ -1843,6 +1843,95 @@ def main():
                 show_login_button()
         except:
             pass  # Ignore auth errors in this section
+        
+        # Camera Input Section
+        st.markdown("### 📸 Take Photo")
+        st.markdown("""
+        <style>
+        .camera-section {
+            border: 2px dashed #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        .camera-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: #28a745;
+        }
+        </style>
+        <div class="camera-section">
+            <div class="camera-icon">📷</div>
+            <p><strong>Capture Legal Document</strong></p>
+            <p>Take a photo of survey plats, legal descriptions, or property documents</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        camera_image = st.camera_input("📸 Take a picture", label_visibility="collapsed")
+        
+        if camera_image is not None:
+            if st.button("🔍 Process Photo", use_container_width=True, type="primary"):
+                st.info("🔄 Processing photo...")
+                try:
+                    # Convert camera image to PIL Image
+                    from PIL import Image
+                    import io
+                    
+                    image = Image.open(io.BytesIO(camera_image.getvalue()))
+                    
+                    # Store image in session state for preview
+                    img_byte_arr = io.BytesIO()
+                    image.save(img_byte_arr, format='PNG')
+                    st.session_state.pdf_image = img_byte_arr.getvalue()
+                    
+                    # Extract text using tesseract
+                    import pytesseract
+                    extracted_text = pytesseract.image_to_string(image)
+                    st.session_state.extracted_text = extracted_text
+                    
+                    # Process with GPT if available
+                    if get_openai_key():
+                        try:
+                            filename = "camera_capture.jpg"
+                            file_size = len(camera_image.getvalue())
+                            page_count = 1
+                            
+                            bearings, result_text = extract_bearings_with_gpt(
+                                extracted_text, filename, 
+                                st.session_state.get('user', {}).get('email', 'anonymous'), 
+                                file_size, page_count
+                            )
+                            
+                            st.session_state.gpt_response = result_text
+                            
+                            if bearings:
+                                st.session_state.parsed_bearings = bearings
+                                st.session_state.line_count = len(bearings)
+                                
+                                # Populate session state
+                                for i, bearing in enumerate(bearings):
+                                    st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                    st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                    st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                    st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                    st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                    st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                    st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                
+                                st.session_state.draw_lines_section_expanded = False
+                                st.success(f"📸✅ Successfully extracted {len(bearings)} bearings from photo!")
+                            else:
+                                st.warning("📸⚠️ No bearings found in photo")
+                                
+                        except Exception as e:
+                            st.error(f"📸❌ Error processing photo: {str(e)}")
+                    else:
+                        st.warning("📸⚠️ OpenAI API key required for legal description analysis")
+                        
+                except Exception as e:
+                    st.error(f"📸❌ Error processing camera image: {str(e)}")
             
         if st.session_state.pdf_image:
             st.image(st.session_state.pdf_image, caption='PDF Preview', use_container_width=True)
