@@ -1658,6 +1658,7 @@ def main():
             tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
         
         # Only access tabs when they're defined for the authorized user
+        # Prevents UnboundLocalError
         if user and user.get('email') == 'sanjay149@gmail.com':
             with tab1:
             if pdf_files:
