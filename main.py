@@ -1647,14 +1647,15 @@ def main():
                     st.session_state.draw_lines_section_expanded = False
                     st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
         
-        # Available PDF Files Selector
-        import glob
-        pdf_files = glob.glob("*.pdf")
-        
-        st.subheader("📄 Example PDFs")
-        
-        # Create tabs for different sources
-        tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
+        # Available PDF Files Selector - only for specific users
+        if user and user.get('email') == 'sanjay149@gmail.com':
+            import glob
+            pdf_files = glob.glob("*.pdf")
+            
+            st.subheader("📄 Example PDFs")
+            
+            # Create tabs for different sources
+            tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
         
         with tab1:
             if pdf_files:
@@ -1845,31 +1846,39 @@ def main():
             pass  # Ignore auth errors in this section
         
         # Camera Input Section
-        st.markdown("### 📸 Take Photo")
         st.markdown("""
         <style>
         .camera-section {
-            border: 2px dashed #28a745;
-            border-radius: 10px;
-            padding: 20px;
+            background: grey;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px 0;
             text-align: center;
-            margin: 10px 0;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         }
-        .camera-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            color: #28a745;
+        .camera-text {
+            color: #207bd6;
+            font-size: 0.9em;
+            margin: 5px 0;
         }
         </style>
         <div class="camera-section">
-            <div class="camera-icon">📷</div>
-            <p><strong>Capture Legal Document</strong></p>
-            <p>Take a photo of survey plats, legal descriptions, or property documents</p>
+            <div class="camera-text">📸 Capture Document</div>
         </div>
         """, unsafe_allow_html=True)
         
-        camera_image = st.camera_input("📸 Take a picture", label_visibility="collapsed")
+        # Only show camera input when user clicks to enable it
+        if 'show_camera' not in st.session_state:
+            st.session_state.show_camera = False
+            
+        if not st.session_state.show_camera:
+            if st.button("📸 Enable Camera", use_container_width=True, type="secondary"):
+                st.session_state.show_camera = True
+                st.rerun()
+        else:
+            camera_image = st.camera_input("Take a picture", label_visibility="collapsed")
+            if st.button("❌ Hide Camera", use_container_width=True, type="secondary"):
+                st.session_state.show_camera = False
+                st.rerun()
         
         if camera_image is not None:
             if st.button("🔍 Process Photo", use_container_width=True, type="primary"):
