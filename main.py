@@ -1657,7 +1657,8 @@ def main():
             # Create tabs for different sources
             tab1, tab2 = st.tabs(["📂 Local Files", "☁️ Google Drive"])
         
-        with tab1:
+        if user and user.get('email') == 'sanjay149@gmail.com':
+            with tab1:
             if pdf_files:
                 # AUTO-PROCESS first PDF for testing (only when AUTO_PROCESS_DEBUG is enabled)
                 if AUTO_PROCESS_DEBUG and 'auto_processed' not in st.session_state:
@@ -1756,7 +1757,8 @@ def main():
             else:
                 st.info("No PDF files found in the project directory.")
         
-        with tab2:
+        if user and user.get('email') == 'sanjay149@gmail.com':
+            with tab2:
                 # Input for Google Drive folder link
                 drive_link = st.text_input(
                     "Google Drive folder share link:",
