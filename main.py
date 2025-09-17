@@ -1627,7 +1627,7 @@ def main():
     with col1:
         # PDF Upload Section
         st.subheader("Upload PDF")
-        uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'])
+uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'])
         if uploaded_file is not None:
             if st.button("Process PDF", type="primary"):
                 st.info("🔄 Processing PDF...")
