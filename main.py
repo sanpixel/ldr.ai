@@ -67,6 +67,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.graphics import shapes
 from reportlab.graphics.shapes import Drawing, Line, String, Circle
+from PIL import Image as PILImage
 
 # Try to import FreeCAD, but don't fail if it's not available
 FREECAD_AVAILABLE = False
@@ -1015,6 +1016,61 @@ def draw_lines_from_bearings():
             # Update current point
             st.session_state.current_point = end_point
 
+def process_image(uploaded_file):
+    """Process uploaded image file and extract bearings."""
+    try:
+        # Open image directly
+        image = PILImage.open(uploaded_file)
+        
+        # Convert to bytes for preview
+        img_byte_arr = BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        st.session_state.pdf_image = img_byte_arr.getvalue()
+        
+        # Extract text using OCR with high quality settings
+        extracted_text = pytesseract.image_to_string(image, config='--oem 3 --psm 6')
+        
+        # Store extracted text in session state
+        st.session_state.extracted_text = extracted_text
+        st.session_state.processing_messages = []
+        
+        # Extract supplemental information first
+        if get_openai_key():
+            try:
+                supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
+                if supplemental_info:
+                    st.session_state.supplemental_info = supplemental_info
+                    st.success("Successfully extracted property information")
+            except Exception as e:
+                st.error(f"Error extracting property information: {str(e)}")
+        
+        # Extract bearings using GPT
+        if get_openai_key():
+            try:
+                filename = getattr(uploaded_file, 'name', 'Uploaded Image')
+                file_size = len(uploaded_file.getvalue())
+                page_count = 1
+                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
+                st.info(f"GPT returned {len(bearings)} bearings")
+                
+                st.session_state.gpt_response = result_text
+                
+                if bearings:
+                    st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
+                    return bearings
+                else:
+                    st.warning("No bearings found")
+                    return []
+            except Exception as e:
+                st.error(f"GPT analysis failed: {str(e)}")
+                return []
+        else:
+            st.warning("No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions.")
+            return []
+    except Exception as e:
+        st.error(f"Error processing image: {str(e)}")
+        return []
+
 def process_pdf(uploaded_file):
     """Process uploaded PDF file and extract bearings."""
     try:
@@ -1627,11 +1683,16 @@ def main():
     with col1:
         # PDF Upload Section
         st.subheader("Upload PDF")
-uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'])
+        uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'])
         if uploaded_file is not None:
             if st.button("Process PDF", type="primary"):
-                st.info("🔄 Processing PDF...")
-                bearings = process_pdf(uploaded_file)
+                st.info("🔄 Processing file...")
+                # Route to appropriate processor based on file type
+                filename = getattr(uploaded_file, 'name', '').lower()
+                if filename.endswith(('.jpg', '.jpeg')):
+                    bearings = process_image(uploaded_file)
+                else:
+                    bearings = process_pdf(uploaded_file)
                 if bearings:
                     st.session_state.parsed_bearings = bearings
                     st.session_state.line_count = len(bearings)
@@ -1647,9 +1708,11 @@ uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg
                     st.session_state.draw_lines_section_expanded = False
                     st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
         
-        # Available PDF Files Selector
-        import glob
-        pdf_files = glob.glob("*.pdf")
+        # Available PDF Files Selector (only for sanjay149@gmail.com)
+        user_email = st.session_state.get('user', {}).get('email', '')
+        if user_email == 'sanjay149@gmail.com':
+            import glob
+            pdf_files = glob.glob("*.pdf")
         
         st.subheader("📄 Example PDFs")
         
