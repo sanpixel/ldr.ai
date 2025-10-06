@@ -1917,87 +1917,87 @@ def main():
             tab1, tab2 = st.tabs(["☁️ Google Drive", "📁 OneDrive"])
             
             with tab1:
-            # Input for Google Drive folder link
-            drive_link = st.text_input(
-                "Google Drive folder share link:",
-                value="https://drive.google.com/drive/folders/1-BiLAKzEGndi3XQAxcAD1zQ-McKHodgS?usp=drive_link",
-                help="Make sure the folder is publicly shared (anyone with link can view)"
-            )
-            
-            if drive_link:
-                folder_id = extract_folder_id_from_share_link(drive_link)
+                # Input for Google Drive folder link
+                drive_link = st.text_input(
+                    "Google Drive folder share link:",
+                    value="https://drive.google.com/drive/folders/1-BiLAKzEGndi3XQAxcAD1zQ-McKHodgS?usp=drive_link",
+                    help="Make sure the folder is publicly shared (anyone with link can view)"
+                )
                 
-                if folder_id:
-                    if st.button("🔍 List PDFs from Google Drive", type="secondary"):
-                        if not os.environ.get('GOOGLE_DRIVE_API_KEY'):
-                            st.error("Google Drive API key not configured. Please add GOOGLE_DRIVE_API_KEY to environment variables.")
-                        else:
-                            with st.spinner("Fetching PDFs from Google Drive..."):
-                                drive_files = list_pdfs_from_google_drive(folder_id)
-                                
-                                if drive_files:
-                                    st.success(f"✅ Found {len(drive_files)} PDF files!")
-                                    st.session_state.drive_files = drive_files
-                                else:
-                                    st.warning("No PDF files found in the Google Drive folder or folder is not accessible.")
+                if drive_link:
+                    folder_id = extract_folder_id_from_share_link(drive_link)
                     
-                    # Show file selection and process button if files are loaded
-                    if hasattr(st.session_state, 'drive_files') and st.session_state.drive_files:
-                        st.info(f"📁 Loaded: {len(st.session_state.drive_files)} files from Google Drive")
-                        
-                        # Display the files
-                        selected_drive_file = st.selectbox(
-                            "Choose a PDF from Google Drive:",
-                            options=[f["name"] for f in st.session_state.drive_files],
-                            format_func=lambda x: f"{x} ({next(f['size'] for f in st.session_state.drive_files if f['name'] == x) if 'size' in st.session_state.drive_files[0] else 'Unknown size'} bytes)"
-                        )
-                        
-                        if selected_drive_file:
-                            # Find the selected file info
-                            selected_file_info = next(f for f in st.session_state.drive_files if f['name'] == selected_drive_file)
-                            
-                            if st.button(f"🔄 Process {selected_drive_file}", use_container_width=True, type="primary"):
-                                with st.spinner(f"Downloading and processing {selected_drive_file}..."):
-                                    # Download the file
-                                    pdf_buffer = download_pdf_from_google_drive(selected_file_info['id'])
+                    if folder_id:
+                        if st.button("🔍 List PDFs from Google Drive", type="secondary"):
+                            if not os.environ.get('GOOGLE_DRIVE_API_KEY'):
+                                st.error("Google Drive API key not configured. Please add GOOGLE_DRIVE_API_KEY to environment variables.")
+                            else:
+                                with st.spinner("Fetching PDFs from Google Drive..."):
+                                    drive_files = list_pdfs_from_google_drive(folder_id)
                                     
-                                    if pdf_buffer:
-                                        # Set filename for processing
-                                        pdf_buffer.name = selected_drive_file
-                                        
-                                        # Process the PDF
-                                        bearings = process_pdf(pdf_buffer)
-                                        
-                                        if bearings:
-                                            st.session_state.parsed_bearings = bearings
-                                            st.session_state.line_count = len(bearings)
-                                            
-                                            # Populate session state with extracted bearings
-                                            for i, bearing in enumerate(bearings):
-                                                st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
-                                                st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
-                                                st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
-                                                st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
-                                                st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
-                                                st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
-                                                st.session_state[f"monument_{i}"] = bearing.get('monument', '')
-                                            
-                                            st.session_state.draw_lines_section_expanded = False
-                                            st.success(f"✅ Extracted {len(bearings)} bearings from {selected_drive_file}!")
-                                        else:
-                                            st.warning("⚠️ No bearings found.")
+                                    if drive_files:
+                                        st.success(f"✅ Found {len(drive_files)} PDF files!")
+                                        st.session_state.drive_files = drive_files
                                     else:
-                                        st.error("❌ Failed to download file from Google Drive")
+                                        st.warning("No PDF files found in the Google Drive folder or folder is not accessible.")
+                        
+                        # Show file selection and process button if files are loaded
+                        if hasattr(st.session_state, 'drive_files') and st.session_state.drive_files:
+                            st.info(f"📁 Loaded: {len(st.session_state.drive_files)} files from Google Drive")
+                            
+                            # Display the files
+                            selected_drive_file = st.selectbox(
+                                "Choose a PDF from Google Drive:",
+                                options=[f["name"] for f in st.session_state.drive_files],
+                                format_func=lambda x: f"{x} ({next(f['size'] for f in st.session_state.drive_files if f['name'] == x) if 'size' in st.session_state.drive_files[0] else 'Unknown size'} bytes)"
+                            )
+                            
+                            if selected_drive_file:
+                                # Find the selected file info
+                                selected_file_info = next(f for f in st.session_state.drive_files if f['name'] == selected_drive_file)
+                                
+                                if st.button(f"🔄 Process {selected_drive_file}", use_container_width=True, type="primary"):
+                                    with st.spinner(f"Downloading and processing {selected_drive_file}..."):
+                                        # Download the file
+                                        pdf_buffer = download_pdf_from_google_drive(selected_file_info['id'])
+                                        
+                                        if pdf_buffer:
+                                            # Set filename for processing
+                                            pdf_buffer.name = selected_drive_file
+                                            
+                                            # Process the PDF
+                                            bearings = process_pdf(pdf_buffer)
+                                            
+                                            if bearings:
+                                                st.session_state.parsed_bearings = bearings
+                                                st.session_state.line_count = len(bearings)
+                                                
+                                                # Populate session state with extracted bearings
+                                                for i, bearing in enumerate(bearings):
+                                                    st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                                    st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                                    st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                                    st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                                    st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                                    st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                                    st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                                
+                                                st.session_state.draw_lines_section_expanded = False
+                                                st.success(f"✅ Extracted {len(bearings)} bearings from {selected_drive_file}!")
+                                            else:
+                                                st.warning("⚠️ No bearings found.")
+                                        else:
+                                            st.error("❌ Failed to download file from Google Drive")
+                    else:
+                        st.error("❌ Invalid Google Drive link. Please check the format.")
                 else:
-                    st.error("❌ Invalid Google Drive link. Please check the format.")
-            else:
-                st.info("💡 To use Google Drive integration:")
-                st.markdown("""
-                1. Go to your Google Drive folder
-                2. Right-click and select "Share"
-                3. Set permissions to "Anyone with the link can view"
-                4. Copy the link and paste it above
-                """)
+                    st.info("💡 To use Google Drive integration:")
+                    st.markdown("""
+                    1. Go to your Google Drive folder
+                    2. Right-click and select "Share"
+                    3. Set permissions to "Anyone with the link can view"
+                    4. Copy the link and paste it above
+                    """)
             
             with tab2:
                 # OneDrive placeholder for future integration
