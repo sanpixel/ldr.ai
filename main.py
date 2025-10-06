@@ -1710,6 +1710,7 @@ def main():
         
         # Available PDF Files Selector (only for sanjay149@gmail.com)
         user_email = st.session_state.get('user', {}).get('email', '')
+        pdf_files = []  # Initialize as empty list
         if user_email == 'sanjay149@gmail.com':
             import glob
             pdf_files = glob.glob("*.pdf")
