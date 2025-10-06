@@ -1771,7 +1771,6 @@ def main():
                     if selected_pdf:
                         # Display file info with caption
                         try:
-                            import os
                             file_size = os.path.getsize(selected_pdf)
                             file_size_kb = file_size / 1024
                             if file_size_kb > 1024:
