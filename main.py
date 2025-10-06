@@ -726,7 +726,22 @@ def initialize_session_state():
     if 'parsed_bearings' not in st.session_state:
         st.session_state.parsed_bearings = None
     if 'pdf_image' not in st.session_state:
-        st.session_state.pdf_image = None
+        # Load default example PDF image on first visit
+        try:
+            example_pdf_path = "GWINNETT Deed Book 59715 Page 467.pdf"
+            if os.path.exists(example_pdf_path):
+                from pdf2image import convert_from_path
+                images = convert_from_path(example_pdf_path, first_page=1, last_page=1, dpi=150)
+                if images:
+                    img_byte_arr = BytesIO()
+                    images[0].save(img_byte_arr, format='PNG')
+                    st.session_state.pdf_image = img_byte_arr.getvalue()
+                else:
+                    st.session_state.pdf_image = None
+            else:
+                st.session_state.pdf_image = None
+        except Exception:
+            st.session_state.pdf_image = None
     if 'supplemental_info' not in st.session_state:
         st.session_state.supplemental_info = None
     if 'manual_bearing' not in st.session_state:
@@ -1026,6 +1041,7 @@ def process_image(uploaded_file):
         img_byte_arr = BytesIO()
         image.save(img_byte_arr, format='PNG')
         st.session_state.pdf_image = img_byte_arr.getvalue()
+        st.session_state.user_uploaded_pdf = True
         
         # Extract text using OCR with high quality settings
         extracted_text = pytesseract.image_to_string(image, config='--oem 3 --psm 6')
@@ -1089,6 +1105,7 @@ def process_pdf(uploaded_file):
             images[0].save(img_byte_arr, format='PNG')
             img_byte_arr = img_byte_arr.getvalue()
             st.session_state.pdf_image = img_byte_arr
+            st.session_state.user_uploaded_pdf = True
 
         # Extract text from each page
         extracted_text = ""
@@ -2019,7 +2036,9 @@ def main():
             pass  # Ignore auth errors in this section
             
         if st.session_state.pdf_image:
-            st.image(st.session_state.pdf_image, caption='PDF Preview', use_container_width=True)
+            # Check if this is the default example or user-uploaded
+            caption = 'Example: Gwinnett County Deed' if not hasattr(st.session_state, 'user_uploaded_pdf') else 'PDF Preview'
+            st.image(st.session_state.pdf_image, caption=caption, use_container_width=True)
 
     # Display processing messages if available (from PDF processing)
     if hasattr(st.session_state, 'processing_messages') and st.session_state.processing_messages:
