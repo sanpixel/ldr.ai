@@ -21,12 +21,12 @@ except ImportError:
 st_ls = StLocalStorage()
 
 def get_supabase_key():
-    # First try environment variable (for online deployment)
+    # First try environment variable (works for both production and local .env)
     env_key = os.getenv("SUPABASE_ANON_KEY")
     if env_key:
         return env_key
     
-    # Fallback to local JSON file (for local development)
+    # Fallback to local JSON file (legacy local development - keeps existing setup working)
     local_key_file = r"C:\dev\openai-key.json"
     try:
         if os.path.exists(local_key_file):

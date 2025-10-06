@@ -6,13 +6,13 @@ import json
 
 # Initialize OpenAI key function (needs to be early for the print statement)
 def get_openai_key():
-    # First try environment variable (for online deployment)
+    # First try environment variable (works for both production and local .env)
     env_key = os.environ.get("OPENAI_API_KEY")
     print(f"Debug: env_key = {bool(env_key)}")
     if env_key:
         return env_key
     
-    # Fallback to local JSON file (for local development)
+    # Fallback to local JSON file (legacy local development - keeps existing setup working)
     local_key_file = r"C:\dev\openai-key.json"
     print(f"Debug: Checking local file {local_key_file}")
     try:
