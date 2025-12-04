@@ -1404,12 +1404,12 @@ def export_csv():
         
         # Write POB (first point)
         first_row = st.session_state.lines.iloc[0]
-        buffer.write(f"{first_row['start_x']:.2f},{first_row['start_y']:.2f},POB\n")
+        buffer.write(f"{first_row['start_x']:.6f},{first_row['start_y']:.6f},POB\n")
         
         # Write each endpoint
         for idx, row in st.session_state.lines.iterrows():
-            x = f"{row['end_x']:.2f}"
-            y = f"{row['end_y']:.2f}"
+            x = f"{row['end_x']:.6f}"
+            y = f"{row['end_y']:.6f}"
             monument = row.get('monument', '')
             
             # Escape commas in monument text
