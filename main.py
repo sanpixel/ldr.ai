@@ -1035,8 +1035,14 @@ def draw_lines_from_bearings():
 def process_image(uploaded_file):
     """Process uploaded image file and extract bearings."""
     try:
-        # Open image directly
-        image = PILImage.open(uploaded_file)
+        # Get file info before opening
+        filename = getattr(uploaded_file, 'name', 'Uploaded Image')
+        uploaded_file.seek(0)  # Reset file pointer to beginning
+        file_content = uploaded_file.read()
+        file_size = len(file_content)
+        
+        # Open image from bytes
+        image = PILImage.open(BytesIO(file_content))
         
         # Convert to bytes for preview
         img_byte_arr = BytesIO()
@@ -1064,8 +1070,6 @@ def process_image(uploaded_file):
         # Extract bearings using GPT
         if get_openai_key():
             try:
-                filename = getattr(uploaded_file, 'name', 'Uploaded Image')
-                file_size = len(uploaded_file.getvalue())
                 page_count = 1
                 bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
                 st.info(f"GPT returned {len(bearings)} bearings")
