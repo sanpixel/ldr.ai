@@ -1741,6 +1741,33 @@ def main():
         uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'], key="main_file_uploader")
         
         if uploaded_file is not None:
+            # Generate preview immediately on upload
+            filename = getattr(uploaded_file, 'name', '').lower()
+            try:
+                if filename.endswith(('.jpg', '.jpeg')):
+                    # Image preview
+                    image = PILImage.open(uploaded_file)
+                    img_byte_arr = BytesIO()
+                    image.save(img_byte_arr, format='PNG')
+                    st.session_state.pdf_image = img_byte_arr.getvalue()
+                    st.session_state.user_uploaded_pdf = True
+                    uploaded_file.seek(0)  # Reset for later processing
+                else:
+                    # PDF preview - first page only
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                        tmp_file.write(uploaded_file.getvalue())
+                        pdf_path = tmp_file.name
+                    images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=150)
+                    if images:
+                        img_byte_arr = BytesIO()
+                        images[0].save(img_byte_arr, format='PNG')
+                        st.session_state.pdf_image = img_byte_arr.getvalue()
+                        st.session_state.user_uploaded_pdf = True
+                    os.unlink(pdf_path)
+                    uploaded_file.seek(0)  # Reset for later processing
+            except Exception as e:
+                st.warning(f"Could not generate preview: {str(e)}")
+            
             if st.button("Process PDF", type="primary"):
                 st.info("🔄 Processing file...")
                 # Route to appropriate processor based on file type
@@ -2139,7 +2166,7 @@ def main():
             
         if st.session_state.pdf_image:
             # Check if this is the default example or user-uploaded
-            caption = 'Example: Gwinnett County Deed' if not hasattr(st.session_state, 'user_uploaded_pdf') else 'PDF Preview'
+            caption = 'Example: Gwinnett County Deed' if not hasattr(st.session_state, 'user_uploaded_pdf') else 'PDF Preview - please verify orientation'
             st.image(st.session_state.pdf_image, caption=caption, use_container_width=True)
 
     # Display processing messages if available (from PDF processing)
