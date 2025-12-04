@@ -34,3 +34,7 @@ ENV/
 *.swp
 *.swo
 .DS_Store
+
+# AutoCAD LISP files (keep local only)
+*.lsp
+*.LSP

@@ -1389,6 +1389,42 @@ def export_pdf():
         return None
 
 
+def export_csv():
+    """Export bearing data to CSV format for AutoCAD LISP import."""
+    if st.session_state.lines.empty:
+        st.error("No lines to export")
+        return None
+    
+    try:
+        # Create CSV buffer
+        buffer = StringIO()
+        
+        # Write header
+        buffer.write("Bearing,Distance,Monument\n")
+        
+        # Write each line
+        for idx, row in st.session_state.lines.iterrows():
+            bearing = format_bearing_concise(row['bearing_desc'])
+            distance = f"{row['distance']:.2f}"
+            monument = row.get('monument', '')
+            
+            # Escape commas in monument text
+            if ',' in monument:
+                monument = f'"{monument}"'
+            
+            buffer.write(f"{bearing},{distance},{monument}\n")
+        
+        # Get CSV content
+        csv_content = buffer.getvalue()
+        buffer.close()
+        
+        return csv_content
+        
+    except Exception as e:
+        st.error(f"CSV export error: {str(e)}")
+        return None
+
+
 def manual_bearing_input_to_parsed_format(cardinal_ns, degrees, minutes, seconds, cardinal_ew, distance, monument):
     """Convert manual input fields to parsed bearing format."""
     try:
@@ -2217,7 +2253,7 @@ def main():
         st.subheader("Draw Lines")
 
         # Action Buttons
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
         with col1:
             if st.button("Draw Lines", use_container_width=True):
@@ -2246,6 +2282,17 @@ def main():
                     draw_lines_from_bearings()
 
         with col2:
+            if st.button("Export CSV", use_container_width=True):
+                csv_data = export_csv()
+                if csv_data:
+                    st.download_button(
+                        label="Download CSV",
+                        data=csv_data,
+                        file_name="survey_data.csv",
+                        mime="text/csv"
+                    )
+
+        with col3:
             if st.button("Export DXF", use_container_width=True):
                 dxf_data = create_dxf()
                 if dxf_data:
@@ -2256,7 +2303,7 @@ def main():
                         mime="application/dxf"
                     )
 
-        with col3:
+        with col4:
             if st.button("Export PDF", use_container_width=True):
                 pdf_data = export_pdf()
                 if pdf_data:
@@ -2267,7 +2314,7 @@ def main():
                         mime="application/pdf"
                     )
 
-        with col4:
+        with col5:
             if st.button("Debug", use_container_width=True):
                 # Generate 4 random bearings
                 for i in range(4):
@@ -2302,7 +2349,7 @@ def main():
                     st.session_state.parsed_bearings = manual_bearings
                     draw_lines_from_bearings()
 
-        with col5:
+        with col6:
             if st.button("Clear All", use_container_width=True):
                 st.session_state.current_point = [0, 0]
                 st.session_state.lines = pd.DataFrame(columns=['start_x', 'start_y', 'end_x', 'end_y', 'bearing', 'bearing_desc', 'distance', 'monument'])
@@ -2323,7 +2370,7 @@ def main():
                     st.session_state[f"distance_{i}"] = 0.00
                     st.session_state[f"monument_{i}"] = ""
 
-        with col6:
+        with col7:
             if st.button("Add Line", use_container_width=True):
                 st.session_state.line_count += 1
                 # Initialize new line fields
