@@ -593,7 +593,8 @@ def create_dxf():
     try:
         # Create new document
         doc = ezdxf.new(setup=True)
-        msp = doc.modelspace()
+        
+ 
 
         # Add POB text and arrow
         try:
@@ -2126,7 +2127,7 @@ def main():
             df,
             use_container_width=True,
             hide_index=True,
-            num_rows="fixed",
+            num_rows="dynamic",
             column_config={
                 "Line": st.column_config.NumberColumn(
                     "Line",
@@ -2387,88 +2388,6 @@ def main():
         with st.container():
             for line_num in range(st.session_state.line_count):
                 st.markdown(f"**Line {line_num + 1}**")
-                
-                # Add move buttons and delete button
-                btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1, 1, 1, 9])
-                with btn_col1:
-                    if st.button("⬆️", key=f"move_up_{line_num}", disabled=(line_num == 0), help="Move line up"):
-                        # Swap with previous line
-                        prev_num = line_num - 1
-                        # Store current line data
-                        temp_data = {
-                            'cardinal_ns': st.session_state[f"cardinal_ns_{line_num}"],
-                            'degrees': st.session_state[f"degrees_{line_num}"],
-                            'minutes': st.session_state[f"minutes_{line_num}"],
-                            'seconds': st.session_state[f"seconds_{line_num}"],
-                            'cardinal_ew': st.session_state[f"cardinal_ew_{line_num}"],
-                            'distance': st.session_state[f"distance_{line_num}"],
-                            'monument': st.session_state[f"monument_{line_num}"]
-                        }
-                        # Copy previous line to current
-                        st.session_state[f"cardinal_ns_{line_num}"] = st.session_state[f"cardinal_ns_{prev_num}"]
-                        st.session_state[f"degrees_{line_num}"] = st.session_state[f"degrees_{prev_num}"]
-                        st.session_state[f"minutes_{line_num}"] = st.session_state[f"minutes_{prev_num}"]
-                        st.session_state[f"seconds_{line_num}"] = st.session_state[f"seconds_{prev_num}"]
-                        st.session_state[f"cardinal_ew_{line_num}"] = st.session_state[f"cardinal_ew_{prev_num}"]
-                        st.session_state[f"distance_{line_num}"] = st.session_state[f"distance_{prev_num}"]
-                        st.session_state[f"monument_{line_num}"] = st.session_state[f"monument_{prev_num}"]
-                        # Copy temp data to previous
-                        st.session_state[f"cardinal_ns_{prev_num}"] = temp_data['cardinal_ns']
-                        st.session_state[f"degrees_{prev_num}"] = temp_data['degrees']
-                        st.session_state[f"minutes_{prev_num}"] = temp_data['minutes']
-                        st.session_state[f"seconds_{prev_num}"] = temp_data['seconds']
-                        st.session_state[f"cardinal_ew_{prev_num}"] = temp_data['cardinal_ew']
-                        st.session_state[f"distance_{prev_num}"] = temp_data['distance']
-                        st.session_state[f"monument_{prev_num}"] = temp_data['monument']
-                        st.rerun()
-                
-                with btn_col2:
-                    if st.button("⬇️", key=f"move_down_{line_num}", disabled=(line_num == st.session_state.line_count - 1), help="Move line down"):
-                        # Swap with next line
-                        next_num = line_num + 1
-                        # Store current line data
-                        temp_data = {
-                            'cardinal_ns': st.session_state[f"cardinal_ns_{line_num}"],
-                            'degrees': st.session_state[f"degrees_{line_num}"],
-                            'minutes': st.session_state[f"minutes_{line_num}"],
-                            'seconds': st.session_state[f"seconds_{line_num}"],
-                            'cardinal_ew': st.session_state[f"cardinal_ew_{line_num}"],
-                            'distance': st.session_state[f"distance_{line_num}"],
-                            'monument': st.session_state[f"monument_{line_num}"]
-                        }
-                        # Copy next line to current
-                        st.session_state[f"cardinal_ns_{line_num}"] = st.session_state[f"cardinal_ns_{next_num}"]
-                        st.session_state[f"degrees_{line_num}"] = st.session_state[f"degrees_{next_num}"]
-                        st.session_state[f"minutes_{line_num}"] = st.session_state[f"minutes_{next_num}"]
-                        st.session_state[f"seconds_{line_num}"] = st.session_state[f"seconds_{next_num}"]
-                        st.session_state[f"cardinal_ew_{line_num}"] = st.session_state[f"cardinal_ew_{next_num}"]
-                        st.session_state[f"distance_{line_num}"] = st.session_state[f"distance_{next_num}"]
-                        st.session_state[f"monument_{line_num}"] = st.session_state[f"monument_{next_num}"]
-                        # Copy temp data to next
-                        st.session_state[f"cardinal_ns_{next_num}"] = temp_data['cardinal_ns']
-                        st.session_state[f"degrees_{next_num}"] = temp_data['degrees']
-                        st.session_state[f"minutes_{next_num}"] = temp_data['minutes']
-                        st.session_state[f"seconds_{next_num}"] = temp_data['seconds']
-                        st.session_state[f"cardinal_ew_{next_num}"] = temp_data['cardinal_ew']
-                        st.session_state[f"distance_{next_num}"] = temp_data['distance']
-                        st.session_state[f"monument_{next_num}"] = temp_data['monument']
-                        st.rerun()
-                
-                with btn_col3:
-                    if st.button("🗑️", key=f"delete_{line_num}", disabled=(st.session_state.line_count <= 1), help="Delete line"):
-                        # Shift all lines after this one up
-                        for i in range(line_num, st.session_state.line_count - 1):
-                            next_i = i + 1
-                            st.session_state[f"cardinal_ns_{i}"] = st.session_state[f"cardinal_ns_{next_i}"]
-                            st.session_state[f"degrees_{i}"] = st.session_state[f"degrees_{next_i}"]
-                            st.session_state[f"minutes_{i}"] = st.session_state[f"minutes_{next_i}"]
-                            st.session_state[f"seconds_{i}"] = st.session_state[f"seconds_{next_i}"]
-                            st.session_state[f"cardinal_ew_{i}"] = st.session_state[f"cardinal_ew_{next_i}"]
-                            st.session_state[f"distance_{i}"] = st.session_state[f"distance_{next_i}"]
-                            st.session_state[f"monument_{i}"] = st.session_state[f"monument_{next_i}"]
-                        # Decrease line count
-                        st.session_state.line_count -= 1
-                        st.rerun()
                 
                 col1, col2, col3, col4, col5, col6, col7 = st.columns([2,1,1,1,1.5,1.5,2])
 
