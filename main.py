@@ -1033,28 +1033,60 @@ def draw_lines_from_bearings():
             st.session_state.current_point = end_point
 
 def process_image(uploaded_file):
-    """Process uploaded image file by converting to PDF and using the proven PDF flow."""
+    """Process uploaded image file - uses same flow as PDF without conversion."""
     try:
-        # Convert image to PDF
+        # Open image directly
         image = PILImage.open(uploaded_file)
         
-        # Convert RGB if needed (PDF requires RGB)
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        # Store preview image (same as PDF)
+        img_byte_arr = BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        st.session_state.pdf_image = img_byte_arr.getvalue()
+        st.session_state.user_uploaded_pdf = True
         
-        # Save as PDF in memory
-        pdf_buffer = BytesIO()
-        image.save(pdf_buffer, format='PDF')
-        pdf_buffer.seek(0)
+        # Extract text using OCR (same as PDF)
+        extracted_text = pytesseract.image_to_string(image)
         
-        # Set the name attribute so process_pdf can use it
-        pdf_buffer.name = getattr(uploaded_file, 'name', 'converted_image.pdf')
+        # Store extracted text in session state (same as PDF)
+        st.session_state.extracted_text = extracted_text
+        st.session_state.processing_messages = []
         
-        # Now use the proven PDF processing flow
-        return process_pdf(pdf_buffer)
+        # Extract supplemental information first (same as PDF)
+        if get_openai_key():
+            try:
+                supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
+                if supplemental_info:
+                    st.session_state.supplemental_info = supplemental_info
+                    st.success("Successfully extracted property information")
+            except Exception as e:
+                st.error(f"Error extracting property information: {str(e)}")
         
+        # Extract bearings using GPT (same as PDF)
+        if get_openai_key():
+            try:
+                filename = getattr(uploaded_file, 'name', 'Uploaded Image')
+                uploaded_file.seek(0)
+                file_size = len(uploaded_file.read())
+                page_count = 1
+                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
+                st.info(f"GPT returned {len(bearings)} bearings")
+                
+                st.session_state.gpt_response = result_text
+                
+                if bearings:
+                    st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
+                    return bearings
+                else:
+                    st.warning("No bearings found")
+                    return []
+            except Exception as e:
+                st.error(f"GPT analysis failed: {str(e)}")
+                return []
+        else:
+            st.warning("No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions.")
+            return []
     except Exception as e:
-        st.error(f"Error converting image to PDF: {str(e)}")
+        st.error(f"Error processing image: {str(e)}")
         return []
 
 def process_pdf(uploaded_file):
