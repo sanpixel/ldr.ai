@@ -1773,7 +1773,7 @@ def main():
         
         # Create tabs for different sources - show Local Files tab only for sanjay149@gmail.com
         if user_email == 'sanjay149@gmail.com':
-            tab1, tab2, tab3 = st.tabs(["📂 Local Files", "☁️ Google Drive", "📁 OneDrive"])
+            tab1, tab2, tab3, tab4 = st.tabs(["📂 Local Files", "☁️ Google Drive", "📁 OneDrive", "📷 Take Photo"])
             
             with tab1:
                 if pdf_files:
@@ -1965,9 +1965,40 @@ def main():
                 
                 Stay tuned for updates!
                 """)
+            
+            with tab4:
+                # Camera input for taking photos (logged-in users)
+                st.info("📷 Take a photo of your legal description document")
+                camera_photo = st.camera_input("Capture document")
+                
+                if camera_photo is not None:
+                    if st.button("🔄 Process Photo", use_container_width=True, type="primary", key="process_camera_logged_in"):
+                        with st.spinner("Processing photo..."):
+                            # Process the camera image
+                            bearings = process_image(camera_photo)
+                            
+                            if bearings:
+                                st.session_state.parsed_bearings = bearings
+                                st.session_state.line_count = len(bearings)
+                                
+                                # Populate session state with extracted bearings
+                                for i, bearing in enumerate(bearings):
+                                    st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                    st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                    st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                    st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                    st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                    st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                    st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                
+                                st.session_state.draw_lines_section_expanded = False
+                                draw_lines_from_bearings()
+                                st.success(f"✅ Extracted {len(bearings)} bearings from photo!")
+                            else:
+                                st.warning("⚠️ No bearings found in photo.")
         else:
-            # For non-logged-in users, show Google Drive and OneDrive tabs (OneDrive placeholder for future)
-            tab1, tab2 = st.tabs(["☁️ Google Drive", "📁 OneDrive"])
+            # For non-logged-in users, show Google Drive, OneDrive, and Camera tabs
+            tab1, tab2, tab3 = st.tabs(["☁️ Google Drive", "📁 OneDrive", "📷 Take Photo"])
             
             with tab1:
                 # Input for Google Drive folder link
@@ -2063,6 +2094,37 @@ def main():
                 
                 Stay tuned for updates!
                 """)
+            
+            with tab3:
+                # Camera input for taking photos
+                st.info("📷 Take a photo of your legal description document")
+                camera_photo = st.camera_input("Capture document")
+                
+                if camera_photo is not None:
+                    if st.button("🔄 Process Photo", use_container_width=True, type="primary"):
+                        with st.spinner("Processing photo..."):
+                            # Process the camera image
+                            bearings = process_image(camera_photo)
+                            
+                            if bearings:
+                                st.session_state.parsed_bearings = bearings
+                                st.session_state.line_count = len(bearings)
+                                
+                                # Populate session state with extracted bearings
+                                for i, bearing in enumerate(bearings):
+                                    st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
+                                    st.session_state[f"degrees_{i}"] = bearing.get('degrees', 0)
+                                    st.session_state[f"minutes_{i}"] = bearing.get('minutes', 0)
+                                    st.session_state[f"seconds_{i}"] = bearing.get('seconds', 0)
+                                    st.session_state[f"cardinal_ew_{i}"] = bearing.get('cardinal_ew', "East")
+                                    st.session_state[f"distance_{i}"] = float(bearing.get('distance', 0.0))
+                                    st.session_state[f"monument_{i}"] = bearing.get('monument', '')
+                                
+                                st.session_state.draw_lines_section_expanded = False
+                                draw_lines_from_bearings()
+                                st.success(f"✅ Extracted {len(bearings)} bearings from photo!")
+                            else:
+                                st.warning("⚠️ No bearings found in photo.")
 
     with col2:
         # Show login button if not authenticated
