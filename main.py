@@ -1737,16 +1737,21 @@ def main():
     with col1:
         # PDF Upload Section
         st.subheader("Upload PDF")
-        uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'])
+        uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'], key="main_file_uploader")
+        
+        # Store uploaded file in session state to persist across reruns
         if uploaded_file is not None:
+            st.session_state.uploaded_file = uploaded_file
+        
+        if st.session_state.get('uploaded_file') is not None:
             if st.button("Process PDF", type="primary"):
                 st.info("🔄 Processing file...")
                 # Route to appropriate processor based on file type
-                filename = getattr(uploaded_file, 'name', '').lower()
+                filename = getattr(st.session_state.uploaded_file, 'name', '').lower()
                 if filename.endswith(('.jpg', '.jpeg')):
-                    bearings = process_image(uploaded_file)
+                    bearings = process_image(st.session_state.uploaded_file)
                 else:
-                    bearings = process_pdf(uploaded_file)
+                    bearings = process_pdf(st.session_state.uploaded_file)
                 if bearings:
                     st.session_state.parsed_bearings = bearings
                     st.session_state.line_count = len(bearings)
@@ -1760,6 +1765,7 @@ def main():
                         st.session_state[f"monument_{i}"] = bearing.get('monument', '')
                     
                     st.session_state.draw_lines_section_expanded = False
+                    draw_lines_from_bearings()
                     st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
         
         # Available PDF Files Selector (only for sanjay149@gmail.com)
