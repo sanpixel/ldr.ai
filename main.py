@@ -1023,7 +1023,7 @@ def draw_lines_from_bearings():
             end_point = calculate_endpoint(st.session_state.current_point, bearing_decimal, distance)
 
             # Create bearing description
-            bearing_desc = bearing['original_text']
+            bearing_desc = bearing.get('original_text', f"{bearing['cardinal_ns']} {bearing['degrees']}° {bearing['minutes']}' {bearing['seconds']}\" {bearing['cardinal_ew']}")
 
             # Add new line to DataFrame with explicit dtypes
             new_line = pd.DataFrame({
