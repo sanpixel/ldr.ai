@@ -53,4 +53,16 @@ PLAT_BOOK: [plat book reference]
 PAGE_NUMBER: [PAGE NUMBER REFERENC]
 SECTION: [section/township/range if applicable]
 
+IMPORTANT: After providing the above analysis, you MUST also output a JSON section for programmatic parsing.
+For EXPLICIT_BEARINGS, convert ALL bearings (including abstract ones like "Northwesterly") to structured format.
+Abstract bearing conversions: Northwesterly=N 45° W, Northeasterly=N 45° E, Southwesterly=S 45° W, Southeasterly=S 45° E
+
+Output JSON in this exact format at the end:
+
+JSON:
+{"bearings": [
+  {"cardinal_ns": "North", "degrees": 90, "minutes": 0, "seconds": 0, "cardinal_ew": "East", "distance": 90.0, "monument": "iron pin found..."},
+  {"cardinal_ns": "South", "degrees": 5, "minutes": 18, "seconds": 0, "cardinal_ew": "West", "distance": 150.0, "monument": "iron pin found..."}
+]}
+
 Text to analyze:

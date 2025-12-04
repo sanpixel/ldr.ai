@@ -410,12 +410,27 @@ Text to analyze:"""
                 st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
                 st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
         
-        # Parse bearings - GPT prompt handles classification, we just extract the data
+        # Try to extract JSON first (preferred method)
         bearings = []
-        current_bearing = {}
+        json_match = re.search(r'JSON:\s*(\{.*\})', result_text, re.DOTALL)
         
-        # Process all lines to extract bearings (GPT already filtered by classification)
-        for line in lines:
+        if json_match:
+            try:
+                json_data = json.loads(json_match.group(1))
+                bearings = json_data.get('bearings', [])
+                if st.session_state.get('debug_enabled', False):
+                    st.success(f"✅ Parsed {len(bearings)} bearings from JSON")
+            except json.JSONDecodeError as e:
+                if st.session_state.get('debug_enabled', False):
+                    st.warning(f"⚠️ JSON parsing failed: {str(e)}, falling back to text parsing")
+                bearings = []
+        
+        # Fallback to text parsing if JSON not found or failed
+        if not bearings:
+            current_bearing = {}
+            
+            # Process all lines to extract bearings (GPT already filtered by classification)
+            for line in lines:
             line = line.strip()
             if not line:
                 continue
@@ -476,12 +491,15 @@ Text to analyze:"""
             elif line.upper().startswith('MONUMENT:') and current_bearing:
                 current_bearing['monument'] = line.split(':', 1)[1].strip()
 
-        # Add the last bearing if complete
-        if current_bearing.get('distance'):
-            bearings.append(current_bearing)
+            # Add the last bearing if complete
+            if current_bearing.get('distance'):
+                bearings.append(current_bearing)
 
-        # Return only fully parsed bearings, but let GPT handle the classification logic
-        parsed_bearings = [b for b in bearings if 'cardinal_ns' in b]
+            # Return only fully parsed bearings from text parsing
+            bearings = [b for b in bearings if 'cardinal_ns' in b]
+        
+        # At this point, bearings is either from JSON or text parsing
+        parsed_bearings = bearings
         
         # Calculate parsing metrics after we have the results
         total_bearings = len(bearings)
