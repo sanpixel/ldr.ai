@@ -410,6 +410,9 @@ Text to analyze:"""
                 st.write(f"**Reasoning**: {reasoning_data.get('reasoning', 'Not found')}")
                 st.write(f"**Evidence**: {reasoning_data.get('evidence', 'Not found')}")
         
+        # Count total bearings in GPT response (for comparison)
+        total_in_response = len([line for line in lines if line.strip().upper().startswith('BEARING:')])
+        
         # Try to extract JSON first (preferred method)
         bearings = []
         json_match = re.search(r'JSON:\s*(\{.*\})', result_text, re.DOTALL)
@@ -419,7 +422,7 @@ Text to analyze:"""
                 json_data = json.loads(json_match.group(1))
                 bearings = json_data.get('bearings', [])
                 if st.session_state.get('debug_enabled', False):
-                    st.success(f"✅ Parsed {len(bearings)} bearings from JSON")
+                    st.success(f"✅ Parsed {len(bearings)} bearings from JSON (GPT returned {total_in_response} in text)")
             except json.JSONDecodeError as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"⚠️ JSON parsing failed: {str(e)}, falling back to text parsing")
@@ -1087,7 +1090,9 @@ def process_image(uploaded_file):
                 file_size = len(uploaded_file.read())
                 page_count = 1
                 bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
-                st.info(f"GPT returned {len(bearings)} bearings")
+                # Count bearings in response text
+                total_in_response = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
+                st.info(f"Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
                 
                 st.session_state.gpt_response = result_text
                 
@@ -1165,7 +1170,9 @@ def process_pdf(uploaded_file):
                     st.write(f"🔍 DEBUG: File size: {file_size} bytes")
                     st.write(f"🔍 DEBUG: Page count: {page_count} pages")
                 bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
-                st.info(f"GPT returned {len(bearings)} bearings")
+                # Count bearings in response text
+                total_in_response = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
+                st.info(f"Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
                 
                 # Store the GPT response for debug display
                 st.session_state.gpt_response = result_text
