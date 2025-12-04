@@ -434,65 +434,65 @@ Text to analyze:"""
             
             # Process all lines to extract bearings (GPT already filtered by classification)
             for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+                line = line.strip()
+                if not line:
+                    continue
 
-            if line.upper().startswith('BEARING:'):
-                # Save previous bearing if it's complete
-                if current_bearing.get('distance'):
-                    bearings.append(current_bearing)
-                
-                bearing_text = line.split(':', 1)[1].strip()
-                current_bearing = {'bearing': bearing_text} 
-
-                # Try unified pattern for both formats
-                # Handles: S 73° 32' 01" W AND North 71 degrees 51 minutes 19 seconds East
-                pattern = r'(S|South|N|North)[\s\.]*(\d+)(?:[\s°degrees]+(?:(\d+)(?:[\s\'minutes]+(?:(\d+(?:\.\d+)?)(?:[\s"seconds]+)?)?)?)?)?[\s]*(E|W|East|West)'
-                match = re.search(pattern, bearing_text, re.IGNORECASE)
-                
-                # Try long format: North 71 degrees 53 minutes 10 seconds East
-                long_pattern = r'(North|South)\s+(\d+)\s+degrees?\s+(\d+)\s+minutes?\s+(\d+(?:\.\d+)?)\s+seconds?\s+(East|West)'
-                long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
-                
-                if match:
-                    groups = match.groups()
-                    if st.session_state.get('debug_enabled', False):
-                        st.markdown(f"<small>🔍 DEBUG: Successfully matched '{bearing_text}' | Groups: {groups} | Pattern: Standard</small>", unsafe_allow_html=True)
+                if line.upper().startswith('BEARING:'):
+                    # Save previous bearing if it's complete
+                    if current_bearing.get('distance'):
+                        bearings.append(current_bearing)
                     
-                    ns_raw = (groups[0] or '').upper()
-                    ew_raw = (groups[4] or '').upper()
+                    bearing_text = line.split(':', 1)[1].strip()
+                    current_bearing = {'bearing': bearing_text} 
 
-                    current_bearing['cardinal_ns'] = 'South' if 'S' in ns_raw else 'North'
-                    current_bearing['cardinal_ew'] = 'East' if 'E' in ew_raw else 'West'
-                    current_bearing['degrees'] = int(groups[1]) if groups[1] else 0
-                    current_bearing['minutes'] = int(groups[2]) if groups[2] else 0
-                    current_bearing['seconds'] = int(float(groups[3])) if groups[3] else 0
-                    current_bearing['original_text'] = bearing_text
+                    # Try unified pattern for both formats
+                    # Handles: S 73° 32' 01" W AND North 71 degrees 51 minutes 19 seconds East
+                    pattern = r'(S|South|N|North)[\s\.]*(\d+)(?:[\s°degrees]+(?:(\d+)(?:[\s\'minutes]+(?:(\d+(?:\.\d+)?)(?:[\s"seconds]+)?)?)?)?)?[\s]*(E|W|East|West)'
+                    match = re.search(pattern, bearing_text, re.IGNORECASE)
                     
-                elif long_match:
-                    groups = long_match.groups()
-                    if st.session_state.get('debug_enabled', False):
-                        st.markdown(f"<small>🔍 DEBUG: Successfully matched LONG '{bearing_text}' | Groups: {groups} | Pattern: Long</small>", unsafe_allow_html=True)
+                    # Try long format: North 71 degrees 53 minutes 10 seconds East
+                    long_pattern = r'(North|South)\s+(\d+)\s+degrees?\s+(\d+)\s+minutes?\s+(\d+(?:\.\d+)?)\s+seconds?\s+(East|West)'
+                    long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
                     
-                    current_bearing['cardinal_ns'] = groups[0]  # North or South
-                    current_bearing['cardinal_ew'] = groups[4]  # East or West
-                    current_bearing['degrees'] = int(groups[1])
-                    current_bearing['minutes'] = int(groups[2])
-                    current_bearing['seconds'] = int(float(groups[3]))
-                    current_bearing['original_text'] = bearing_text
-                    
-                else:
-                    current_bearing['original_text'] = bearing_text  # Store even if parsing failed
+                    if match:
+                        groups = match.groups()
+                        if st.session_state.get('debug_enabled', False):
+                            st.markdown(f"<small>🔍 DEBUG: Successfully matched '{bearing_text}' | Groups: {groups} | Pattern: Standard</small>", unsafe_allow_html=True)
+                        
+                        ns_raw = (groups[0] or '').upper()
+                        ew_raw = (groups[4] or '').upper()
 
-            elif line.upper().startswith('DISTANCE:') and current_bearing:
-                distance_text = line.split(':', 1)[1].strip()
-                distance_match = re.search(r'(\d+(?:\.\d+)?)', distance_text)
-                if distance_match:
-                    current_bearing['distance'] = float(distance_match.group(1))
+                        current_bearing['cardinal_ns'] = 'South' if 'S' in ns_raw else 'North'
+                        current_bearing['cardinal_ew'] = 'East' if 'E' in ew_raw else 'West'
+                        current_bearing['degrees'] = int(groups[1]) if groups[1] else 0
+                        current_bearing['minutes'] = int(groups[2]) if groups[2] else 0
+                        current_bearing['seconds'] = int(float(groups[3])) if groups[3] else 0
+                        current_bearing['original_text'] = bearing_text
+                        
+                    elif long_match:
+                        groups = long_match.groups()
+                        if st.session_state.get('debug_enabled', False):
+                            st.markdown(f"<small>🔍 DEBUG: Successfully matched LONG '{bearing_text}' | Groups: {groups} | Pattern: Long</small>", unsafe_allow_html=True)
+                        
+                        current_bearing['cardinal_ns'] = groups[0]  # North or South
+                        current_bearing['cardinal_ew'] = groups[4]  # East or West
+                        current_bearing['degrees'] = int(groups[1])
+                        current_bearing['minutes'] = int(groups[2])
+                        current_bearing['seconds'] = int(float(groups[3]))
+                        current_bearing['original_text'] = bearing_text
+                        
+                    else:
+                        current_bearing['original_text'] = bearing_text  # Store even if parsing failed
 
-            elif line.upper().startswith('MONUMENT:') and current_bearing:
-                current_bearing['monument'] = line.split(':', 1)[1].strip()
+                elif line.upper().startswith('DISTANCE:') and current_bearing:
+                    distance_text = line.split(':', 1)[1].strip()
+                    distance_match = re.search(r'(\d+(?:\.\d+)?)', distance_text)
+                    if distance_match:
+                        current_bearing['distance'] = float(distance_match.group(1))
+
+                elif line.upper().startswith('MONUMENT:') and current_bearing:
+                    current_bearing['monument'] = line.split(':', 1)[1].strip()
 
             # Add the last bearing if complete
             if current_bearing.get('distance'):
@@ -614,8 +614,7 @@ def create_dxf():
     try:
         # Create new document
         doc = ezdxf.new(setup=True)
-        
- 
+        msp = doc.modelspace()
 
         # Add POB text and arrow
         try:

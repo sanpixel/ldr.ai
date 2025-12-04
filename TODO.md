@@ -28,6 +28,16 @@
   - Handle mixed descriptions that combine multiple types
 
 ### 🔄 Improvements
+- [ ] **Fix classification database logging errors**:
+  - Debug output currently has errors when saving to classification database
+  - Need to investigate and fix database schema/connection issues
+  - Once fixed, use classification logging for debug data that I can read
+  - This will allow remote debugging without screenshots
+- [ ] **Handle abstract bearings in parser**:
+  - GPT sometimes returns "Northwesterly" instead of "N 45d 30m 15s W"
+  - Parser skips these, causing inconsistent bearing counts
+  - Convert abstract bearings (Northwesterly, Southeasterly, etc.) to approximate degrees
+  - Example: Northwesterly = N 45° 0' 0" W
 - [ ] Add validation for bearing inputs (ensure they make sense)
 - [ ] Improve error handling for malformed PDFs
 - [ ] Add support for more legal description formats
