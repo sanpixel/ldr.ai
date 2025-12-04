@@ -1390,7 +1390,7 @@ def export_pdf():
 
 
 def export_csv():
-    """Export point coordinates to CSV format for AutoCAD LISP import."""
+    """Export bearing and distance data to CSV format for AutoCAD LISP import."""
     if st.session_state.lines.empty:
         st.error("No lines to export")
         return None
@@ -1400,23 +1400,19 @@ def export_csv():
         buffer = StringIO()
         
         # Write header
-        buffer.write("X,Y,Monument\n")
+        buffer.write("Bearing,Distance,Monument\n")
         
-        # Write POB (first point)
-        first_row = st.session_state.lines.iloc[0]
-        buffer.write(f"{first_row['start_x']:.6f},{first_row['start_y']:.6f},POB\n")
-        
-        # Write each endpoint
+        # Write each line with bearing and distance
         for idx, row in st.session_state.lines.iterrows():
-            x = f"{row['end_x']:.6f}"
-            y = f"{row['end_y']:.6f}"
+            bearing = format_bearing_concise(row['bearing_desc'])
+            distance = f"{row['distance']:.2f}"
             monument = row.get('monument', '')
             
             # Escape commas in monument text
             if ',' in monument:
                 monument = f'"{monument}"'
             
-            buffer.write(f"{x},{y},{monument}\n")
+            buffer.write(f"{bearing},{distance},{monument}\n")
         
         # Get CSV content
         csv_content = buffer.getvalue()
