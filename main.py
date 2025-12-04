@@ -1740,19 +1740,15 @@ def main():
         st.subheader("Upload PDF")
         uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'], key="main_file_uploader")
         
-        # Store uploaded file in session state to persist across reruns
         if uploaded_file is not None:
-            st.session_state.uploaded_file = uploaded_file
-        
-        if st.session_state.get('uploaded_file') is not None:
             if st.button("Process PDF", type="primary"):
                 st.info("🔄 Processing file...")
                 # Route to appropriate processor based on file type
-                filename = getattr(st.session_state.uploaded_file, 'name', '').lower()
+                filename = getattr(uploaded_file, 'name', '').lower()
                 if filename.endswith(('.jpg', '.jpeg')):
-                    bearings = process_image(st.session_state.uploaded_file)
+                    bearings = process_image(uploaded_file)
                 else:
-                    bearings = process_pdf(st.session_state.uploaded_file)
+                    bearings = process_pdf(uploaded_file)
                 if bearings:
                     st.session_state.parsed_bearings = bearings
                     st.session_state.line_count = len(bearings)
