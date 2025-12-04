@@ -2203,50 +2203,58 @@ def main():
             column_config={
                 "Line": st.column_config.NumberColumn(
                     "Line",
-                    disabled=True,
-                    width="small"
+                    disabled=False,
+                    width="small",
+                    default=len(df) + 1
                 ),
                 "Cardinal NS": st.column_config.SelectboxColumn(
                     "Cardinal NS",
                     options=["North", "South"],
-                    width="small"
+                    width="small",
+                    default="North"
                 ),
                 "Degrees": st.column_config.NumberColumn(
                     "Degrees",
                     min_value=0,
                     max_value=90,
                     step=1,
-                    width="small"
+                    width="small",
+                    default=0
                 ),
                 "Minutes": st.column_config.NumberColumn(
                     "Minutes",
                     min_value=0,
                     max_value=59,
                     step=1,
-                    width="small"
+                    width="small",
+                    default=0
                 ),
                 "Seconds": st.column_config.NumberColumn(
                     "Seconds",
                     min_value=0,
                     max_value=59,
                     step=1,
-                    width="small"
+                    width="small",
+                    default=0
                 ),
                 "Cardinal EW": st.column_config.SelectboxColumn(
                     "Cardinal EW",
                     options=["East", "West"],
-                    width="small"
+                    width="small",
+                    default="East"
                 ),
                 "Distance": st.column_config.NumberColumn(
                     "Distance (ft)",
                     min_value=0.0,
                     step=0.01,
                     format="%.2f",
-                    width="medium"
+                    width="medium",
+                    default=0.0
                 ),
                 "Monument": st.column_config.TextColumn(
                     "Monument",
-                    width="large"
+                    width="large",
+                    default=""
                 )
             },
             key="editable_bearings_table"
