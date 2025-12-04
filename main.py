@@ -1033,16 +1033,10 @@ def draw_lines_from_bearings():
             st.session_state.current_point = end_point
 
 def process_image(uploaded_file):
-    """Process uploaded image file and extract bearings."""
+    """Process uploaded image file and extract bearings - uses same flow as PDF."""
     try:
-        # Get file info before opening
-        filename = getattr(uploaded_file, 'name', 'Uploaded Image')
-        uploaded_file.seek(0)  # Reset file pointer to beginning
-        file_content = uploaded_file.read()
-        file_size = len(file_content)
-        
-        # Open image from bytes
-        image = PILImage.open(BytesIO(file_content))
+        # Open image directly
+        image = PILImage.open(uploaded_file)
         
         # Convert to bytes for preview
         img_byte_arr = BytesIO()
@@ -1050,8 +1044,8 @@ def process_image(uploaded_file):
         st.session_state.pdf_image = img_byte_arr.getvalue()
         st.session_state.user_uploaded_pdf = True
         
-        # Extract text using OCR with high quality settings
-        extracted_text = pytesseract.image_to_string(image, config='--oem 3 --psm 6')
+        # Extract text using OCR (same as PDF)
+        extracted_text = pytesseract.image_to_string(image)
         
         # Store extracted text in session state
         st.session_state.extracted_text = extracted_text
@@ -1067,9 +1061,12 @@ def process_image(uploaded_file):
             except Exception as e:
                 st.error(f"Error extracting property information: {str(e)}")
         
-        # Extract bearings using GPT
+        # Extract bearings using GPT (same as PDF)
         if get_openai_key():
             try:
+                filename = getattr(uploaded_file, 'name', 'Uploaded Image')
+                uploaded_file.seek(0)
+                file_size = len(uploaded_file.read())
                 page_count = 1
                 bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
                 st.info(f"GPT returned {len(bearings)} bearings")
