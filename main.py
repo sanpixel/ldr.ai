@@ -1790,8 +1790,7 @@ def main():
                     os.unlink(pdf_path)
                     uploaded_file.seek(0)  # Reset for later processing
             except Exception as e:
-                if st.session_state.get('debug_enabled', False):
-                    st.warning(f"Could not generate preview: {str(e)}")
+                st.warning(f"Could not generate preview: {str(e)}")
             
             if st.button("Process PDF", type="primary"):
                 st.info("🔄 Processing file...")
