@@ -138,7 +138,21 @@ try:
         
         # Display reasoning entries
         for i, entry in enumerate(filtered_data[:10]):  # Show first 10 of filtered results
-            with st.expander(f"Classification #{i+1} - {entry.get('classification', 'Unknown')} ({entry.get('confidence', 'Unknown')} confidence)"):
+            # Convert UTC timestamp to EST
+            timestamp_utc = entry.get('timestamp', '')
+            try:
+                from datetime import datetime, timedelta
+                dt_utc = datetime.fromisoformat(timestamp_utc.replace('Z', '+00:00'))
+                dt_est = dt_utc - timedelta(hours=5)  # EST is UTC-5
+                timestamp_est = dt_est.strftime('%Y-%m-%d %I:%M:%S %p')
+            except:
+                timestamp_est = 'Unknown'
+            
+            filename = entry.get('original_filename', 'Unknown')
+            upload_method = entry.get('upload_method', 'Unknown')
+            classification = entry.get('classification', 'Unknown')
+            
+            with st.expander(f"{filename} - {upload_method} - {timestamp_est} - {classification}"):
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
@@ -167,6 +181,7 @@ try:
                 with col2:
                     st.markdown("**Classification Details:**")
                     st.json({
+                        "Filename": entry.get('original_filename', 'Unknown'),
                         "Classification": entry.get('classification', 'Unknown'),
                         "Confidence": entry.get('confidence', 'Unknown'),
                         "Timestamp": entry.get('timestamp', 'Unknown')
