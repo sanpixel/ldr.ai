@@ -1942,32 +1942,7 @@ def main():
     with col1:
         # PDF Upload Section
         st.subheader("Upload PDF")
-        uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'], key="main_file_uploader")
-        
-        # Custom Take Photo button for mobile
-        st.markdown("""
-        <style>
-        .take-photo-btn {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background-color: #ff4b4b;
-            color: white;
-            border-radius: 0.5rem;
-            text-align: center;
-            cursor: pointer;
-            font-weight: 600;
-            margin-top: 0.5rem;
-        }
-        .take-photo-btn:hover {
-            background-color: #ff6b6b;
-        }
-        #photoInput {
-            display: none;
-        }
-        </style>
-        <label for="photoInput" class="take-photo-btn">📷 Take Photo</label>
-        <input type="file" id="photoInput" accept="image/*" capture="environment">
-        """, unsafe_allow_html=True)
+        uploaded_file = st.file_uploader("Take Photo or Choose PDF via Browse Files", type=['pdf', 'jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'webp'], key="main_file_uploader")
         
         if uploaded_file is not None:
             # Generate preview immediately on upload
@@ -2031,8 +2006,6 @@ def main():
         if user_email == 'sanjay149@gmail.com':
             import glob
             pdf_files = glob.glob("*.pdf")
-        
-        st.subheader("📄 Example PDFs")
         
         # Create tabs for different sources - show Local Files tab only for sanjay149@gmail.com
         if user_email == 'sanjay149@gmail.com':
