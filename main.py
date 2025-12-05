@@ -1057,16 +1057,16 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         # Create drawing context
         draw = ImageDraw.Draw(image, 'RGBA')
         
-        # Search terms to highlight
-        search_terms = ['land lot', 'district', 'county']
+        # Search terms to highlight (exact matches only)
+        search_terms = ['land', 'lot', 'district', 'county']
         
         # Iterate through OCR results and find matches
         n_boxes = len(ocr_data['text'])
         for i in range(n_boxes):
             text = ocr_data['text'][i].lower().strip()
             
-            # Check if this word matches any search term (or is part of "land lot")
-            if any(term in text or text in term for term in search_terms):
+            # Check if this word exactly matches any search term
+            if text in search_terms:
                 # Get bounding box coordinates
                 x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
                 
