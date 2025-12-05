@@ -1055,6 +1055,11 @@ def draw_lines_from_bearings():
 def process_image(uploaded_file):
     """Process uploaded image file - uses same flow as PDF without conversion."""
     try:
+        # Clear previous document data from session state
+        for key in ['pdf_image', 'extracted_text', 'gpt_response', 'parsed_bearings', 'supplemental_info']:
+            if key in st.session_state:
+                del st.session_state[key]
+        
         # Open image directly
         image = PILImage.open(uploaded_file)
         
@@ -1114,6 +1119,11 @@ def process_image(uploaded_file):
 def process_pdf(uploaded_file):
     """Process uploaded PDF file and extract bearings."""
     try:
+        # Clear previous document data from session state
+        for key in ['pdf_image', 'extracted_text', 'gpt_response', 'parsed_bearings', 'supplemental_info']:
+            if key in st.session_state:
+                del st.session_state[key]
+        
         # Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
