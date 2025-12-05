@@ -1059,10 +1059,26 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         # Search terms to highlight (exact matches only)
         search_terms = ['land', 'lot', 'district', 'county']
         
+        # Get bearing data from session state if available
+        bearing_terms = []
+        if hasattr(st.session_state, 'parsed_bearings') and st.session_state.parsed_bearings:
+            for bearing in st.session_state.parsed_bearings:
+                # Add degrees, minutes, seconds as strings
+                if bearing.get('degrees'):
+                    bearing_terms.append(str(bearing['degrees']))
+                if bearing.get('minutes'):
+                    bearing_terms.append(str(bearing['minutes']))
+                if bearing.get('seconds'):
+                    bearing_terms.append(str(bearing['seconds']))
+                # Add distance
+                if bearing.get('distance'):
+                    bearing_terms.append(str(bearing['distance']))
+        
         # Iterate through OCR results and find matches
         n_boxes = len(ocr_data['text'])
         for i in range(n_boxes):
             text = ocr_data['text'][i].lower().strip()
+            text_raw = ocr_data['text'][i].strip()
             
             # Check if this word exactly matches any search term
             if text in search_terms:
@@ -1075,6 +1091,19 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                     outline='yellow',
                     width=3,
                     fill=(255, 255, 0, 50)  # Yellow with 50/255 opacity
+                )
+            
+            # Check if this matches bearing data
+            elif text_raw in bearing_terms or text_raw.replace('.', '') in bearing_terms:
+                # Get bounding box coordinates
+                x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
+                
+                # Draw semi-transparent green rectangle for bearing data
+                draw.rectangle(
+                    [(x, y), (x + w, y + h)],
+                    outline='green',
+                    width=3,
+                    fill=(0, 255, 0, 50)  # Green with 50/255 opacity
                 )
         
         # Convert back to bytes
