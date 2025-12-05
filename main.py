@@ -1047,8 +1047,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                                     ocr_data['width'].append(w)
                                     ocr_data['height'].append(h)
             except Exception as e:
-                if st.session_state.get('debug_enabled', False):
-                    st.warning(f"Vision API error: {str(e)}, using pytesseract")
+                pass  # Silently fall back to pytesseract
         
         # Fallback to pytesseract if Vision didn't work
         if not ocr_data:
@@ -1198,12 +1197,8 @@ def process_image(uploaded_file):
                         text_annotations = result['responses'][0].get('textAnnotations', [])
                         if text_annotations:
                             extracted_text = text_annotations[0].get('description', '')
-                else:
-                    if st.session_state.get('debug_enabled', False):
-                        st.warning(f"Vision API failed ({response.status_code}), using pytesseract")
             except Exception as e:
-                if st.session_state.get('debug_enabled', False):
-                    st.warning(f"Vision API error: {str(e)}, using pytesseract")
+                pass  # Silently fall back to pytesseract
         
         # Fallback to pytesseract if Vision didn't work
         if not extracted_text:
@@ -1307,12 +1302,8 @@ def process_pdf(uploaded_file):
                             text_annotations = result['responses'][0].get('textAnnotations', [])
                             if text_annotations:
                                 text = text_annotations[0].get('description', '')
-                    else:
-                        if st.session_state.get('debug_enabled', False):
-                            st.warning(f"Vision API failed ({response.status_code}), using pytesseract")
                 except Exception as e:
-                    if st.session_state.get('debug_enabled', False):
-                        st.warning(f"Vision API error: {str(e)}, using pytesseract")
+                    pass  # Silently fall back to pytesseract
             
             # Fallback to pytesseract if Vision didn't work
             if not text:
@@ -1953,6 +1944,31 @@ def main():
         st.subheader("Upload PDF")
         uploaded_file = st.file_uploader("Choose a PDF or Photo file", type=['pdf', 'jpg', 'jpeg'], key="main_file_uploader")
         
+        # Custom Take Photo button for mobile
+        st.markdown("""
+        <style>
+        .take-photo-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: #ff4b4b;
+            color: white;
+            border-radius: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .take-photo-btn:hover {
+            background-color: #ff6b6b;
+        }
+        #photoInput {
+            display: none;
+        }
+        </style>
+        <label for="photoInput" class="take-photo-btn">📷 Take Photo</label>
+        <input type="file" id="photoInput" accept="image/*" capture="environment">
+        """, unsafe_allow_html=True)
+        
         if uploaded_file is not None:
             # Generate preview immediately on upload
             filename = getattr(uploaded_file, 'name', '').lower()
@@ -2411,9 +2427,7 @@ def main():
             st.text_area("Full GPT Response", st.session_state.gpt_response, height=300)
     
     # GPT Extracted Bearings Section
-    if hasattr(st.session_state, 'parsed_bearings') and st.session_state.parsed_bearings:
-        st.markdown("# 🧭 Meets and Bounds")
-    elif hasattr(st.session_state, 'gpt_response') and st.session_state.gpt_response:
+    if hasattr(st.session_state, 'gpt_response') and st.session_state.gpt_response:
         # Check if this was classified as external_ref
         if 'CLASSIFICATION: external_ref' in st.session_state.gpt_response.upper():
             st.markdown("""
