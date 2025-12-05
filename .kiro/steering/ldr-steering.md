@@ -233,6 +233,100 @@ CREATE TABLE classification_data (
 
 ---
 
+## GPT Classification & Prompt System
+
+### Active Prompt File
+**Primary**: `bearings_prompt.txt` (root directory)
+**Fallback**: Embedded prompt in `main.py` (lines ~210-250)
+
+The system attempts to load `bearings_prompt.txt` first. If the file cannot be accessed (FileNotFoundError, IOError, PermissionError), it falls back to an embedded copy of the prompt in the code for Cloud Run reliability.
+
+### Prompt Structure
+
+The prompt instructs GPT to:
+
+1. **Classify the legal description** into one of three types:
+   - `explicit_bearings` - Contains specific measurements (degrees, minutes, seconds, distances)
+   - `abstract_bearings` - Directional descriptions without specific measurements
+   - `external_ref` - References to external documents or survey systems
+
+2. **Provide structured analysis** in this format:
+   ```
+   CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
+   CONFIDENCE: [high|medium|low]
+   REASONING: [explain why you chose this classification]
+   EVIDENCE: [specific text that supports your decision]
+   RANK_ALTERNATIVES:
+     - Second choice: [classification] (reason)
+     - Third choice: [classification] (reason)
+   ```
+
+3. **Extract data based on classification**:
+   - **EXPLICIT_BEARINGS**: Extract bearings, distances, monuments in structured format
+   - **ABSTRACT_BEARINGS**: Extract boundary descriptions and reference points
+   - **EXTERNAL_REF**: Extract lot, block, subdivision, plat book, page number, section
+
+4. **Output JSON** for programmatic parsing (bearings array with structured data)
+
+### Classification Reasoning Flow
+
+1. **User uploads PDF** → OCR extracts text
+2. **Text sent to GPT** with prompt from `bearings_prompt.txt`
+3. **GPT analyzes and responds** with classification, confidence, reasoning, evidence, alternatives
+4. **Parser extracts data** from GPT response (line-by-line parsing in `extract_bearings_with_gpt()`)
+5. **Reasoning data saved** to `classification_data` table in Supabase
+6. **Displayed on reasoning page** (`pages/reasoning.py`)
+
+### Reasoning Dashboard (pages/reasoning.py)
+
+**Purpose**: Streamlit multi-page app tab that displays all saved classification reasoning data from the database.
+
+**Features:**
+- **Summary Statistics**:
+  - Total classifications count
+  - Most common classification type
+  - High confidence percentage
+  - Today's classification count
+
+- **Detailed Classification Entries** (expandable):
+  - Title format: `filename - upload_method - EST_timestamp - classification`
+  - Left column (2/3 width):
+    - Input text (first 500 characters)
+    - AI reasoning explanation
+    - Evidence found (if any)
+    - Alternative classifications considered (if any)
+  - Right column (1/3 width):
+    - Classification details JSON (filename, classification, confidence, timestamp)
+
+- **Filtering**:
+  - Filter by classification type (explicit_bearings, abstract_bearings, external_ref)
+  - Filter by confidence level (high, medium, low)
+  - Limit to 50 results for performance
+
+- **Export Options**:
+  - Download as JSON
+  - Download as CSV
+
+- **Admin Functions**:
+  - Clear all classification data (password protected: "warez")
+
+**Data Source**: Queries `classification_data` table via `load_all_classification_data()` and `get_filtered_classification_data()` from `utils/classification.py`
+
+**Timestamp Conversion**: Converts UTC timestamps from database to EST (UTC-5) for display
+
+### Prompt Versions
+
+Multiple prompt versions exist in the repository:
+- `bearings_prompt.txt` - **ACTIVE** (root directory)
+- `pages/bearings_prompt_v1.1.txt` - Legacy version
+- `pages/bearings_prompt_v1.2.txt` - Legacy version
+- `pages/prompts/bearings_prompt_v1.0.txt` - Legacy version
+- Embedded fallback in `main.py` - Backup copy
+
+Only `bearings_prompt.txt` is actively used. The others are kept for reference.
+
+---
+
 ## Authentication: Supabase OAuth
 
 ### OAuth Provider
@@ -278,36 +372,6 @@ else:
 
 ---
 
-## Deployment History
-
-### Last Known Good Deploy
-- **Deploy #76**: Commit `d3bf195`
-- **Date**: 2025-08-31
-- **Status**: Stable before OAuth changes
-
-### Recent Changes
-- OAuth authentication implementation
-- Fixed redirect URL (port 5000 vs 8501)
-- Simplified login UI (Google only)
-- Environment-aware URL handling
-
----
-
-## Rollback Procedure
-
-If deployment breaks:
-```bash
-# Option 1: Revert recent commits
-git revert HEAD~n  # where n = number of commits to revert
-
-# Option 2: Hard reset to last good deploy
-git reset --hard d3bf195
-git push --force-with-lease origin main
-```
-
-Cloud Build will automatically trigger and redeploy.
-
----
 
 ## Security Notes
 
@@ -372,7 +436,7 @@ if not test_database_connection():
 
 ## Development Workflow
 
-### Local Development
+### there is no actual Local Development
 1. Clone repository
 2. Copy `.env.example` to `.env`
 3. Fill in API keys

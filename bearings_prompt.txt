@@ -15,7 +15,7 @@ ABSTRACT_BEARINGS: Contains directional descriptions without specific measuremen
 EXTERNAL_REF: References external documents or survey systems:
 - "Lot 5, Block 3, Happy Valley Subdivision"
 - "as recorded in Plat Book 42, Page 15"
-- "Section 12, Township 5 North, Range 3 West"
+- if no bearings are found, then it is likely an external reference
 - "according to the plat thereof"
 
 Provide your analysis in this exact format:
@@ -23,7 +23,7 @@ Provide your analysis in this exact format:
 CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
 CONFIDENCE: [high|medium|low]
 REASONING: [explain why you chose this classification]
-EVIDENCE: [all of the specific test that supports your decision]
+EVIDENCE: [all of the specific examples that supports your decision]
 RANK_ALTERNATIVES:
   - Second choice from txt prompt: [classification] (reason)
   - Third choice from txt prompt: [classification] (reason)
@@ -44,18 +44,13 @@ then Extract all bearings, distances, and monuments from the following legal des
 If ABSTRACT_BEARINGS:
 DESCRIPTION: [boundary description]
 REFERENCE: [reference points/lines]
+EVIDENCE: [all of the specific examples of abstract bearings that supports your decision]
 
-If EXTERNAL_REF:
-LOT: [lot number]
-BLOCK: [block number]
-SUBDIVISION: [subdivision name]
-PLAT_BOOK: [plat book reference]
-PAGE_NUMBER: [PAGE NUMBER REFERENC]
-SECTION: [section/township/range if applicable]
+
 
 IMPORTANT: After providing the above analysis, you MUST also output a JSON section for programmatic parsing.
 For EXPLICIT_BEARINGS, convert ALL bearings (including abstract ones like "Northwesterly") to structured format.
-Abstract bearing conversions: Northwesterly=N 45° W, Northeasterly=N 45° E, Southwesterly=S 45° W, Southeasterly=S 45° E
+Abstract bearing conversions should follow along as such: Northwesterly=N 45° W, Northeasterly=N 45° E, Southwesterly=S 45° W, Southeasterly=S 45° E
 
 Output JSON in this exact format at the end:
 

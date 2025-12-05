@@ -2230,7 +2230,44 @@ def main():
             st.text_area("Full GPT Response", st.session_state.gpt_response, height=300)
     
     # GPT Extracted Bearings Section
-    if st.session_state.parsed_bearings:
+    if hasattr(st.session_state, 'parsed_bearings') and st.session_state.parsed_bearings:
+        st.markdown("# 🧭 Meets and Bounds")
+    elif hasattr(st.session_state, 'gpt_response') and st.session_state.gpt_response:
+        # Check if this was classified as external_ref
+        if 'CLASSIFICATION: external_ref' in st.session_state.gpt_response.upper():
+            st.markdown("""
+            <div style="background-color: #ff4b4b; padding: 20px; border-radius: 5px; margin: 10px 0;">
+                <p style="color: white; font-size: 16px; margin: 0;">
+                    <strong>⚠️ External Reference Document</strong><br><br>
+                    This document only shows external references and does not contain enough information to parse and display metes and bounds of the parcel.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Try to parse and display external ref fields from GPT response
+            external_ref_data = {}
+            for line in st.session_state.gpt_response.split('\n'):
+                line = line.strip()
+                if line.startswith('LOT:'):
+                    external_ref_data['Lot'] = line.split(':', 1)[1].strip()
+                elif line.startswith('BLOCK:'):
+                    external_ref_data['Block'] = line.split(':', 1)[1].strip()
+                elif line.startswith('SUBDIVISION:'):
+                    external_ref_data['Subdivision'] = line.split(':', 1)[1].strip()
+                elif line.startswith('PLAT_BOOK:'):
+                    external_ref_data['Plat Book'] = line.split(':', 1)[1].strip()
+                elif line.startswith('PAGE_NUMBER:'):
+                    external_ref_data['Page Number'] = line.split(':', 1)[1].strip()
+                elif line.startswith('SECTION:'):
+                    external_ref_data['Section'] = line.split(':', 1)[1].strip()
+            
+            if external_ref_data:
+                st.markdown("### 📋 External Reference Information")
+                for key, value in external_ref_data.items():
+                    if value and value != '[' and value.strip():
+                        st.write(f"**{key}:** {value}")
+    
+    if hasattr(st.session_state, 'parsed_bearings') and st.session_state.parsed_bearings:
         st.markdown("# 🧭 Meets and Bounds")
         st.markdown("<small>extracted from Legal Description (please review)</small>", unsafe_allow_html=True)
         
