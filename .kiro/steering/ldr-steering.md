@@ -6,18 +6,18 @@
 **Platform**: Google Cloud Run (Serverless Container Platform)  
 **URL**: https://ldr.clocknumbers.com/  
 **Region**: us-central1  
-**Trigger**: Git push to main branch → Cloud Build → Cloud Run
+**Trigger**: Git push to main/dev/prod branches → GitHub Actions → Cloud Run
 
 ### Deployment Flow
 ```
-Git Push → Cloud Build (cloudbuild.yaml) → Docker Build → Container Registry → Cloud Run Deploy
+Git Push → GitHub Actions (.github/workflows/deploy.yml) → Deploy from Source → Cloud Run
 ```
 
-1. **Developer pushes to Git repository**
-2. **Cloud Build triggers automatically** (configured in GCP Console)
-3. **Builds Docker image** using `Dockerfile`
-4. **Pushes to Google Container Registry**: `gcr.io/$PROJECT_ID/ldr-ai:$COMMIT_SHA`
-5. **Deploys to Cloud Run** service named `ldr-ai`
+1. **Developer pushes to Git repository** (main, dev, or prod branch)
+2. **GitHub Actions workflow triggers automatically**
+3. **Authenticates with GCP** using service account key
+4. **Deploys directly from source code** using `google-github-actions/deploy-cloudrun@v2`
+5. **Cloud Run builds and deploys** service named `ldr-ai`
 
 ---
 
@@ -47,32 +47,53 @@ Excludes from Docker build:
 
 ---
 
-## Cloud Build Configuration (cloudbuild.yaml)
+## GitHub Actions Deployment Configuration
 
-### Build Steps
-1. **Build**: `docker build -t gcr.io/$PROJECT_ID/ldr-ai:$COMMIT_SHA`
-2. **Push**: Push image to Google Container Registry
-3. **Deploy**: Deploy to Cloud Run with configuration
+### Workflow File: `.github/workflows/deploy.yml`
 
-### Cloud Run Deployment Settings
-- **Service Name**: `ldr-ai`
-- **Region**: `us-central1`
-- **Platform**: `managed` (fully managed Cloud Run)
-- **Access**: `--allow-unauthenticated` (public access)
-- **Resources**:
-  - Memory: `2Gi`
-  - CPU: `2`
-  - Max Instances: `10` (autoscaling)
-- **Environment Variables** (set via Cloud Build substitutions):
-  - `OPENAI_API_KEY=${_OPENAI_API_KEY}`
-  - `GOOGLE_DRIVE_API_KEY=${_GOOGLE_DRIVE_API_KEY}`
-- **Tag**: `${_ENV_NAME}` (for environment tracking)
+**Triggers:**
+- Push to `main`, `dev`, or `prod` branches
+- Manual workflow dispatch
 
-### Missing from cloudbuild.yaml (Set in Cloud Run Console)
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `ENVIRONMENT=production`
-- `APP_URL=https://ldr.clocknumbers.com/`
+**Authentication:**
+- Uses GCP Service Account key stored in GitHub Secret: `GCP_SA_KEY_RAW`
+- Action: `google-github-actions/auth@v2`
+
+**Deployment Action:**
+- Uses: `google-github-actions/deploy-cloudrun@v2`
+- Deploys from source code (not pre-built image)
+- Service: `ldr-ai`
+- Region: `us-central1`
+
+**Environment Variables** (from GitHub Secrets):
+- `OPENAI_API_KEY` - GPT-4 text processing
+- `GOOGLE_DRIVE_API_KEY` - Google Drive integration
+- `GOOGLE_VISION_API_KEY` - Google Vision API (future use)
+- `SUPABASE_URL` - Database connection
+- `SUPABASE_ANON_KEY` - Database authentication
+- `ENVIRONMENT=production` - Environment flag
+- `APP_URL=https://ldr.clocknumbers.com` - OAuth redirect URL
+
+**Labels Applied:**
+- `managed-by=github-actions`
+- `commit-sha=${{ github.sha }}`
+
+### PR Validation Workflow: `.github/workflows/pr-validation.yml`
+
+**Triggers:**
+- Pull requests to `main`, `dev`, or `prod` branches
+
+**Validation Steps:**
+1. Python syntax check
+2. Docker build validation
+3. Dependency installation test
+4. Import tests
+5. Required files check
+6. Deployment configuration check
+
+### Legacy Cloud Build (Not Used)
+
+The `legacy-cloudbuild.yaml` file is kept for reference only. Deployment previously used Google Cloud Build but has been migrated to GitHub Actions for better visibility and control.
 
 ---
 

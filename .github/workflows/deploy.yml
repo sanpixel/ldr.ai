@@ -38,6 +38,7 @@ jobs:
         env_vars: |
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           GOOGLE_DRIVE_API_KEY=${{ secrets.GOOGLE_DRIVE_API_KEY }}
+          GOOGLE_VISION_API_KEY=${{ secrets.GOOGLE_VISION_API_KEY }}
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           ENVIRONMENT=production

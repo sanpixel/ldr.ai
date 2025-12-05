@@ -353,6 +353,8 @@ Text to analyze:"""
             upload_method = "google_drive"
         elif filename and any(pdf_file == filename for pdf_file in glob.glob("*.pdf")):
             upload_method = "local_file"
+        elif filename and filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+            upload_method = "photo_upload"
         else:
             upload_method = "file_upload"
         ordered_reasoning_data['upload_method'] = upload_method  # How file was uploaded

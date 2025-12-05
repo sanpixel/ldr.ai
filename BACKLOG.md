@@ -9,14 +9,20 @@ All tasks, bugs, and ideas consolidated in one place.
 - [ ] 1.1.2 Put filename first in reasoning_data JSON object for better readability
 - [x] 1.1.3 Update login button to be compact without title for PDF preview section
 
-### 1.2 Email PDF reports
-- [ ] 1.2.1 Email functionality
+### 1.2 Update classification handler
+- [ ] 1.2.1 External ref would usually but not always be classified when 0 bearings are present or a specific plat book is given Example: "Lot 9, Block D of Glenmar II subdivision" alone is NOT external_ref unless it has plat book/page reference and/or zero bearings
+- [ ] 1.2.2 Abstract bearings aren't being caught
 
-### 1.3 Update external ref classification handler
-- [ ] 1.3.1 External ref should only be classified when NO bearings are present
-- [ ] 1.3.2 Require specific plat book and page number to be given
-- [ ] 1.3.3 If 0 bearings found, check for plat reference before classifying as external_ref
-- [ ] 1.3.4 Example: "Lot 9, Block D of Glenmar II subdivision" alone is NOT external_ref unless it has plat book/page reference and zero bearings
+### 1.3 Fix DB upload_method to distinguish photo uploads
+- [ ] 1.3.1 Currently shows "file_upload" for both PDFs and photos
+- [ ] 1.3.2 Need to show "photo_upload" when image files (.jpg, .jpeg) are used
+- [ ] 1.3.3 Keep "file_upload" for PDFs, "local_file" for local, "google_drive" for Drive
+
+### 1.4 Email PDF reports
+- [ ] 1.4.1 Email functionality
+
+### 1.5 Review /pages/prompts usage
+- [ ] 1.5.1 Not using /pages/prompts properly, maybe there's a better way
 
 ## 2. 🔄 Improvements
 

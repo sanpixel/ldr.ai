@@ -1,3 +1,6 @@
+# LEGACY - This file is no longer used. Deployment now uses GitHub Actions (.github/workflows/deploy.yml)
+# Kept for reference only
+
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
@@ -28,7 +31,7 @@ steps:
       - '--max-instances'
       - '10'
       - '--set-env-vars'
-      - 'OPENAI_API_KEY=${_OPENAI_API_KEY},GOOGLE_DRIVE_API_KEY=${_GOOGLE_DRIVE_API_KEY}'
+      - 'OPENAI_API_KEY=${_OPENAI_API_KEY},GOOGLE_DRIVE_API_KEY=${_GOOGLE_DRIVE_API_KEY},GOOGLE_VISION_API_KEY=${_GOOGLE_VISION_API_KEY},SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},ENVIRONMENT=production,APP_URL=https://ldr.clocknumbers.com'
       - '--tag'
       - '${_ENV_NAME}'
 
