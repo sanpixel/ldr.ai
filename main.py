@@ -67,7 +67,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.graphics import shapes
 from reportlab.graphics.shapes import Drawing, Line, String, Circle
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageDraw
 
 # Try to import FreeCAD, but don't fail if it's not available
 FREECAD_AVAILABLE = False
@@ -989,6 +989,59 @@ def extract_supplemental_info_with_gpt(text):
         st.error(f"Error extracting supplemental info: {str(e)}")
         return None
 
+def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
+    """
+    Draw rectangles around Land Lot, District, County text on PDF image.
+    
+    Args:
+        image_bytes: PNG bytes of PDF first page
+        supplemental_info: dict with 'land_lot', 'district', 'county'
+    
+    Returns:
+        PNG bytes with highlights drawn, or original bytes if highlighting fails
+    """
+    try:
+        # Load image from bytes
+        image = PILImage.open(BytesIO(image_bytes))
+        
+        # Get OCR data with bounding boxes
+        ocr_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+        
+        # Create drawing context
+        draw = ImageDraw.Draw(image, 'RGBA')
+        
+        # Search terms to highlight
+        search_terms = ['land lot', 'district', 'county']
+        
+        # Iterate through OCR results and find matches
+        n_boxes = len(ocr_data['text'])
+        for i in range(n_boxes):
+            text = ocr_data['text'][i].lower().strip()
+            
+            # Check if this word matches any search term (or is part of "land lot")
+            if any(term in text or text in term for term in search_terms):
+                # Get bounding box coordinates
+                x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
+                
+                # Draw semi-transparent yellow rectangle
+                draw.rectangle(
+                    [(x, y), (x + w, y + h)],
+                    outline='yellow',
+                    width=3,
+                    fill=(255, 255, 0, 50)  # Yellow with 50/255 opacity
+                )
+        
+        # Convert back to bytes
+        output = BytesIO()
+        image.save(output, format='PNG')
+        return output.getvalue()
+        
+    except Exception as e:
+        # If highlighting fails, return original image
+        if st.session_state.get('debug_enabled', False):
+            st.warning(f"Could not highlight supplemental info: {str(e)}")
+        return image_bytes
+
 def draw_lines_from_bearings():
     """Draw lines using the parsed bearings from session state."""
     # Reset current point and create empty DataFrame with explicit dtypes
@@ -1165,6 +1218,12 @@ def process_pdf(uploaded_file):
                 supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
                 if supplemental_info:
                     st.session_state.supplemental_info = supplemental_info
+                    # Highlight supplemental info on PDF preview
+                    if st.session_state.pdf_image:
+                        st.session_state.pdf_image = highlight_supplemental_info_on_image(
+                            st.session_state.pdf_image,
+                            supplemental_info
+                        )
                     st.success("Successfully extracted property information")
             except Exception as e:
                 st.error(f"Error extracting property information: {str(e)}")

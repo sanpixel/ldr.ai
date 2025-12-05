@@ -24,6 +24,16 @@ All tasks, bugs, and ideas consolidated in one place.
 ### 1.5 Review /pages/prompts usage
 - [ ] 1.5.1 Not using /pages/prompts properly, maybe there's a better way
 
+### 1.6 Highlight bearings on PDF preview
+- [ ] 1.6.1 Highlight degrees, minutes, seconds on the PDF preview image
+- [ ] 1.6.2 Show visual indicators where GPT found bearing data in the document
+
+### 1.7 OCR quality and validation
+- [ ] 1.7.1 Check if same file produces same OCR results (consistency tracking)
+- [ ] 1.7.2 Add manual OCR validation checkbox for user to verify/correct OCR output
+- [ ] 1.7.3 Track OCR confidence/quality metrics
+- [ ] 1.7.4 Add reasoning/classification for OCR quality issues
+
 ## 2. 🔄 Improvements
 
 ### 2.1 Handle abstract bearings in parser
@@ -128,8 +138,9 @@ All tasks, bugs, and ideas consolidated in one place.
 
 ## 6. 🐛 Bug Fixes
 
-### 6.1 Fix mobile axios errors after multiple uploads
-- [ ] 6.1.1 Clear session state between documents to prevent memory buildup
+### 6.1 Fix axios errors after processing
+- [ ] 6.1.1 Mobile: Clear session state between documents to prevent memory buildup
+- [ ] 6.1.2 Desktop: Started getting axios errors after processing documents
 
 ### 6.2 Fix temporary file cleanup
 - [ ] 6.2.1 PDF files saved with delete=False accumulate on disk (main.py:1078-1080)
