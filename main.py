@@ -59,6 +59,7 @@ import io
 from datetime import datetime
 import requests
 import re
+import base64
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -1005,7 +1006,53 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         image = PILImage.open(BytesIO(image_bytes))
         
         # Get OCR data with bounding boxes
-        ocr_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+        ocr_data = None
+        # Try Vision API first if key is available (same pattern as Google Drive API)
+        if os.environ.get('GOOGLE_VISION_API_KEY'):
+            try:
+                # Convert image to bytes and encode
+                img_byte_arr = BytesIO()
+                image.save(img_byte_arr, format='PNG')
+                encoded_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+                
+                # Vision API REST endpoint (same pattern as Drive API)
+                api_url = f"https://vision.googleapis.com/v1/images:annotate?key={os.environ.get('GOOGLE_VISION_API_KEY')}"
+                payload = {
+                    "requests": [{
+                        "image": {"content": encoded_image},
+                        "features": [{"type": "TEXT_DETECTION"}]
+                    }]
+                }
+                
+                response = requests.post(api_url, json=payload)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if 'responses' in result and len(result['responses']) > 0:
+                        # Convert Vision API format to pytesseract-like format for compatibility
+                        text_annotations = result['responses'][0].get('textAnnotations', [])
+                        if text_annotations:
+                            # Skip first annotation (full text), process word-level annotations
+                            ocr_data = {'text': [], 'left': [], 'top': [], 'width': [], 'height': []}
+                            for annotation in text_annotations[1:]:  # Skip first (full text)
+                                ocr_data['text'].append(annotation.get('description', ''))
+                                vertices = annotation.get('boundingPoly', {}).get('vertices', [])
+                                if len(vertices) >= 2:
+                                    x = vertices[0].get('x', 0)
+                                    y = vertices[0].get('y', 0)
+                                    w = vertices[1].get('x', 0) - x
+                                    h = vertices[2].get('y', 0) - y
+                                    ocr_data['left'].append(x)
+                                    ocr_data['top'].append(y)
+                                    ocr_data['width'].append(w)
+                                    ocr_data['height'].append(h)
+            except Exception as e:
+                if st.session_state.get('debug_enabled', False):
+                    st.warning(f"Vision API error: {str(e)}, using pytesseract")
+        
+        # Fallback to pytesseract if Vision didn't work
+        if not ocr_data:
+            ocr_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
         
         # Create drawing context
         draw = ImageDraw.Draw(image, 'RGBA')
@@ -1125,7 +1172,42 @@ def process_image(uploaded_file):
         st.session_state.user_uploaded_pdf = True
         
         # Extract text using OCR (same as PDF)
-        extracted_text = pytesseract.image_to_string(image)
+        extracted_text = ""
+        # Try Vision API first if key is available (same pattern as Google Drive API)
+        if os.environ.get('GOOGLE_VISION_API_KEY'):
+            try:
+                # Convert image to bytes and encode
+                img_byte_arr = BytesIO()
+                image.save(img_byte_arr, format='PNG')
+                encoded_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+                
+                # Vision API REST endpoint (same pattern as Drive API)
+                api_url = f"https://vision.googleapis.com/v1/images:annotate?key={os.environ.get('GOOGLE_VISION_API_KEY')}"
+                payload = {
+                    "requests": [{
+                        "image": {"content": encoded_image},
+                        "features": [{"type": "TEXT_DETECTION"}]
+                    }]
+                }
+                
+                response = requests.post(api_url, json=payload)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if 'responses' in result and len(result['responses']) > 0:
+                        text_annotations = result['responses'][0].get('textAnnotations', [])
+                        if text_annotations:
+                            extracted_text = text_annotations[0].get('description', '')
+                else:
+                    if st.session_state.get('debug_enabled', False):
+                        st.warning(f"Vision API failed ({response.status_code}), using pytesseract")
+            except Exception as e:
+                if st.session_state.get('debug_enabled', False):
+                    st.warning(f"Vision API error: {str(e)}, using pytesseract")
+        
+        # Fallback to pytesseract if Vision didn't work
+        if not extracted_text:
+            extracted_text = pytesseract.image_to_string(image)
         
         # Store extracted text in session state (same as PDF)
         st.session_state.extracted_text = extracted_text
@@ -1199,7 +1281,43 @@ def process_pdf(uploaded_file):
         # Extract text from each page
         extracted_text = ""
         for i, image in enumerate(images):
-            text = pytesseract.image_to_string(image)
+            text = ""
+            # Try Vision API first if key is available (same pattern as Google Drive API)
+            if os.environ.get('GOOGLE_VISION_API_KEY'):
+                try:
+                    # Convert image to bytes and encode
+                    img_byte_arr = BytesIO()
+                    image.save(img_byte_arr, format='PNG')
+                    encoded_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+                    
+                    # Vision API REST endpoint (same pattern as Drive API)
+                    api_url = f"https://vision.googleapis.com/v1/images:annotate?key={os.environ.get('GOOGLE_VISION_API_KEY')}"
+                    payload = {
+                        "requests": [{
+                            "image": {"content": encoded_image},
+                            "features": [{"type": "TEXT_DETECTION"}]
+                        }]
+                    }
+                    
+                    response = requests.post(api_url, json=payload)
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if 'responses' in result and len(result['responses']) > 0:
+                            text_annotations = result['responses'][0].get('textAnnotations', [])
+                            if text_annotations:
+                                text = text_annotations[0].get('description', '')
+                    else:
+                        if st.session_state.get('debug_enabled', False):
+                            st.warning(f"Vision API failed ({response.status_code}), using pytesseract")
+                except Exception as e:
+                    if st.session_state.get('debug_enabled', False):
+                        st.warning(f"Vision API error: {str(e)}, using pytesseract")
+            
+            # Fallback to pytesseract if Vision didn't work
+            if not text:
+                text = pytesseract.image_to_string(image)
+            
             extracted_text += f"\n--- Page {i+1} ---\n{text}\n"
 
         # Clean up temporary file
