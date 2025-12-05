@@ -1989,6 +1989,10 @@ def main():
                     bearings = process_image(uploaded_file)
                 else:
                     bearings = process_pdf(uploaded_file)
+                
+                # Clear uploaded file reference after processing to prevent axios errors
+                uploaded_file = None
+                
                 if bearings:
                     st.session_state.parsed_bearings = bearings
                     st.session_state.line_count = len(bearings)
