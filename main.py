@@ -1068,6 +1068,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         # Get bearing data from session state if available
         bearing_terms = []
         evidence_lines = []
+        evidence_words = []
         
         # Parse evidence from GPT response
         if st.session_state.get('gpt_response'):
@@ -1080,11 +1081,17 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                     # Split on "- " pattern (handles both newlines and single-line format)
                     parts = re.split(r'- "', evidence_section)
                     for part in parts[1:]:  # Skip first empty part
-                        # Find the closing quote
+                        # Find the closing quote - look for quote followed by newline or end
                         if '"' in part:
                             evidence_text = part.split('"')[0]
                             if evidence_text.strip():
-                                evidence_lines.append(evidence_text.strip())
+                                # Strip any leading/trailing quotes that might remain
+                                clean_text = evidence_text.strip().strip('"')
+                                evidence_lines.append(clean_text)
+                    # Also split evidence lines into individual words for matching
+                    evidence_words = []
+                    for line in evidence_lines:
+                        evidence_words.extend(line.split())
             except Exception as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"Evidence parsing failed: {str(e)}")
@@ -1136,8 +1143,8 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                     fill=(0, 0, 255, 50)  # Blue with 50/255 opacity, no outline
                 )
             
-            # Check if this matches evidence lines
-            elif any(evidence_line in text_raw for evidence_line in evidence_lines):
+            # Check if this matches evidence lines (full line match) or evidence words
+            elif any(evidence_line in text_raw for evidence_line in evidence_lines) or text_raw in evidence_words:
                 # Get bounding box coordinates
                 x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
                 
@@ -2903,8 +2910,14 @@ def main():
                             if '"' in part:
                                 evidence_text = part.split('"')[0]
                                 if evidence_text.strip():
-                                    evidence_lines.append(evidence_text.strip())
+                                    clean_text = evidence_text.strip().strip('"')
+                                    evidence_lines.append(clean_text)
+                        # Also split into individual words
+                        evidence_words = []
+                        for line in evidence_lines:
+                            evidence_words.extend(line.split())
                         st.write("Evidence lines we're looking for:", evidence_lines)
+                        st.write("Evidence words we're looking for:", evidence_words)
             
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)

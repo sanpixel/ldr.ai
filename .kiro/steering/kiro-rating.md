@@ -5,7 +5,7 @@ This rating tracks how well Kiro follows instructions:
 - Decreases when Kiro doesn't listen, makes assumptions, or does extra things not requested
 
 Starting score: 100 (listening and doing things correctly - this is where you want to be)
-Current score: 86
+Current score: 91
 
 Deductions:
 - -1: Brought up OCR symbol matching theory twice after being told it doesn't matter
