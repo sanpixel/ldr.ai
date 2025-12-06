@@ -1076,20 +1076,19 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 response_text = st.session_state.gpt_response
                 # Find EVIDENCE section
                 if 'EVIDENCE:' in response_text:
-                    evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
-                    # Extract lines that start with dash
-                    for line in evidence_section.split('\n'):
-                        line = line.strip()
-                        if line.startswith('-'):
-                            # Remove leading dash and strip quotes from start and end
-                            evidence_text = line[1:].strip()
-                            if evidence_text.startswith('"') and evidence_text.endswith('"'):
-                                evidence_text = evidence_text[1:-1]
-                            evidence_lines.append(evidence_text)
+                    evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
+                    # Split on "- " pattern (handles both newlines and single-line format)
+                    parts = re.split(r'- "', evidence_section)
+                    for part in parts[1:]:  # Skip first empty part
+                        # Find the closing quote
+                        if '"' in part:
+                            evidence_text = part.split('"')[0]
+                            if evidence_text.strip():
+                                evidence_lines.append(evidence_text.strip())
             except Exception as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"Evidence parsing failed: {str(e)}")
-                evidence_lines = []
+                evidence_lines = ["parsing did", "not work", "properly"]
         
         if st.session_state.get('parsed_bearings'):
             for bearing in st.session_state.parsed_bearings:
@@ -2897,9 +2896,14 @@ def main():
                     import re
                     response_text = st.session_state.gpt_response
                     if 'EVIDENCE:' in response_text:
-                        evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
-                        quoted_pattern = r'"([^"]+)"'
-                        evidence_lines = re.findall(quoted_pattern, evidence_section)
+                        evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
+                        evidence_lines = []
+                        parts = re.split(r'- "', evidence_section)
+                        for part in parts[1:]:
+                            if '"' in part:
+                                evidence_text = part.split('"')[0]
+                                if evidence_text.strip():
+                                    evidence_lines.append(evidence_text.strip())
                         st.write("Evidence lines we're looking for:", evidence_lines)
             
             with st.expander("Debug: Full Parsed Bearings Data"):
