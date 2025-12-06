@@ -1132,7 +1132,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 )
             
             # Check if this matches evidence lines
-            elif any(text_raw in evidence_line for evidence_line in evidence_lines):
+            elif any(evidence_line in text_raw for evidence_line in evidence_lines):
                 # Get bounding box coordinates
                 x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
                 
@@ -2887,6 +2887,16 @@ def main():
                     if bearing.get('cardinal_ew'):
                         bearing_terms.append(bearing['cardinal_ew'].lower())
                 st.write("Terms we're looking for:", bearing_terms)
+                
+                # Debug evidence lines
+                if st.session_state.get('gpt_response'):
+                    import re
+                    response_text = st.session_state.gpt_response
+                    if 'EVIDENCE:' in response_text:
+                        evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
+                        quoted_pattern = r'"([^"]+)"'
+                        evidence_lines = re.findall(quoted_pattern, evidence_section)
+                        st.write("Evidence lines we're looking for:", evidence_lines)
             
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
