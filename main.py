@@ -973,6 +973,9 @@ def extract_supplemental_info_with_gpt(text):
 
         # Get the response text
         result_text = response.choices[0].message.content
+        
+        # Store the full response for debug display
+        st.session_state.supplemental_response = result_text
 
         # Parse the response
         land_lot = None
@@ -1063,6 +1066,19 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         
         # Get bearing data from session state if available
         bearing_terms = []
+        evidence_lines = []
+        
+        # Parse evidence from GPT response
+        if st.session_state.get('gpt_response'):
+            import re
+            response_text = st.session_state.gpt_response
+            # Find EVIDENCE section
+            if 'EVIDENCE:' in response_text:
+                evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
+                # Extract quoted strings
+                quoted_pattern = r'"([^"]+)"'
+                evidence_lines = re.findall(quoted_pattern, evidence_section)
+        
         if st.session_state.get('parsed_bearings'):
             for bearing in st.session_state.parsed_bearings:
                 # Add degrees, minutes, seconds as strings
@@ -1092,12 +1108,21 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Get bounding box coordinates
                 x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
                 
-                # Draw semi-transparent yellow rectangle
+                # Draw semi-transparent yellow highlight
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    outline='yellow',
-                    width=3,
-                    fill=(255, 255, 0, 50)  # Yellow with 50/255 opacity
+                    fill=(255, 255, 0, 50)  # Yellow with 50/255 opacity, no outline
+                )
+            
+            # Check if this matches evidence lines
+            elif any(text_raw in evidence_line for evidence_line in evidence_lines):
+                # Get bounding box coordinates
+                x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
+                
+                # Draw semi-transparent green highlight for evidence data
+                draw.rectangle(
+                    [(x, y), (x + w, y + h)],
+                    fill=(0, 255, 0, 50)  # Green with 50/255 opacity, no outline
                 )
             
             # Check if this matches bearing data
@@ -2820,8 +2845,13 @@ def main():
         st.image(st.session_state.pdf_image, caption="PDF First Page", use_container_width=True)
         
         # Debug: Show what we're trying to highlight
+        with st.expander("Debug: Yellow Highlighting Info"):
+            st.write("Terms we're looking for:", ['land lot', 'district', 'County'])
+            if st.session_state.get('supplemental_info'):
+                st.json(st.session_state.supplemental_info)
+        
         if st.session_state.get('parsed_bearings'):
-            with st.expander("Debug: Highlighting Info"):
+            with st.expander("Debug: Green Highlighting Info"):
                 bearing_terms = []
                 for bearing in st.session_state.parsed_bearings:
                     if bearing.get('degrees'):
@@ -2840,6 +2870,10 @@ def main():
             
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
+        
+        if st.session_state.get('supplemental_response'):
+            with st.expander("Debug: Full Supplemental Info Response"):
+                st.text(st.session_state.supplemental_response)
 
 if __name__ == "__main__":
     main()
