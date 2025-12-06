@@ -20,6 +20,10 @@ Prevent code drift by ensuring new features follow existing patterns instead of 
 - Point out which existing code you're copying from
 - Explain any necessary differences
 - **Wait for approval before coding**
+- **Wait for approval before coding**
+- **Wait for approval before coding**
+- **Wait for approval before coding**
+- **Wait for approval before coding**
 
 ### 4. Implement Consistently
 - Use the same approach as the existing code

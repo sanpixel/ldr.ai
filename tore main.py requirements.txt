@@ -1,0 +1,25 @@
+[1mdiff --git a/main.py b/main.py[m
+[1mindex df33203..2512cbf 100644[m
+[1m--- a/main.py[m
+[1m+++ b/main.py[m
+[36m@@ -59,6 +59,7 @@[m [mimport io[m
+ from datetime import datetime[m
+ import requests[m
+ import re[m
+[32m+[m[32mimport base64[m
+ from reportlab.lib import colors[m
+ from reportlab.lib.pagesizes import letter[m
+ from reportlab.lib.units import inch[m
+[36m@@ -1199,8 +1200,10 @@[m [mdef process_pdf(uploaded_file):[m
+         # Extract text from each page[m
+         extracted_text = ""[m
+         for i, image in enumerate(images):[m
+[31m-            text = pytesseract.image_to_string(image)[m
+[31m-            extracted_text += f"\n--- Page {i+1} ---\n{text}\n"[m
+[32m+[m[32m            # Try Vision API first if key is available[m
+[32m+[m[32m            text = ""[m
+[32m+[m[32m            if os.environ.get('GOOGLE_VISION_API_KEY'):[m
+[32m+[m[41m        [m
+ [m
+         # Clean up temporary file[m
+         os.unlink(pdf_path)[m

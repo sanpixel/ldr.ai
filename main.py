@@ -1061,7 +1061,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         
         # Get bearing data from session state if available
         bearing_terms = []
-        if hasattr(st.session_state, 'parsed_bearings') and st.session_state.parsed_bearings:
+        if st.session_state.get('parsed_bearings'):
             for bearing in st.session_state.parsed_bearings:
                 # Add degrees, minutes, seconds as strings
                 if bearing.get('degrees'):
@@ -1073,6 +1073,11 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Add distance
                 if bearing.get('distance'):
                     bearing_terms.append(str(bearing['distance']))
+                # Add cardinal directions
+                if bearing.get('cardinal_ns'):
+                    bearing_terms.append(bearing['cardinal_ns'].lower())
+                if bearing.get('cardinal_ew'):
+                    bearing_terms.append(bearing['cardinal_ew'].lower())
         
         # Iterate through OCR results and find matches
         n_boxes = len(ocr_data['text'])
@@ -2015,6 +2020,12 @@ def main():
                 
                 if bearings:
                     st.session_state.parsed_bearings = bearings
+                    # Highlight bearings on PDF preview
+                    if st.session_state.pdf_image:
+                        st.session_state.pdf_image = highlight_supplemental_info_on_image(
+                            st.session_state.pdf_image,
+                            st.session_state.get('supplemental_info')
+                        )
                     st.session_state.line_count = len(bearings)
                     for i, bearing in enumerate(bearings):
                         st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
