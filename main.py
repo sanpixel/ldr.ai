@@ -1062,7 +1062,8 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         draw = ImageDraw.Draw(image, 'RGBA')
         
         # Search terms to highlight (exact matches only)
-        search_terms = ['land', 'lot', 'district', 'county']
+        search_terms = ['land lot', 'district', 'county']
+        thence_terms = ['thence']
         
         # Get bearing data from session state if available
         bearing_terms = []
@@ -1070,14 +1071,19 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         
         # Parse evidence from GPT response
         if st.session_state.get('gpt_response'):
-            import re
-            response_text = st.session_state.gpt_response
-            # Find EVIDENCE section
-            if 'EVIDENCE:' in response_text:
-                evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
-                # Extract quoted strings
-                quoted_pattern = r'"([^"]+)"'
-                evidence_lines = re.findall(quoted_pattern, evidence_section)
+            try:
+                import re
+                response_text = st.session_state.gpt_response
+                # Find EVIDENCE section
+                if 'EVIDENCE:' in response_text:
+                    evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
+                    # Extract quoted strings
+                    quoted_pattern = r'"([^"]+)"'
+                    evidence_lines = re.findall(quoted_pattern, evidence_section)
+            except Exception as e:
+                if st.session_state.get('debug_enabled', False):
+                    st.warning(f"Evidence parsing failed: {str(e)}")
+                evidence_lines = []
         
         if st.session_state.get('parsed_bearings'):
             for bearing in st.session_state.parsed_bearings:
@@ -1112,6 +1118,17 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
                     fill=(255, 255, 0, 50)  # Yellow with 50/255 opacity, no outline
+                )
+            
+            # Check if this matches thence
+            elif text in thence_terms:
+                # Get bounding box coordinates
+                x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
+                
+                # Draw semi-transparent blue highlight
+                draw.rectangle(
+                    [(x, y), (x + w, y + h)],
+                    fill=(0, 0, 255, 50)  # Blue with 50/255 opacity, no outline
                 )
             
             # Check if this matches evidence lines
@@ -2846,9 +2863,12 @@ def main():
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
-            st.write("Terms we're looking for:", ['land lot', 'district', 'County'])
+            st.write("Terms we're looking for:", ['land', 'lot', 'district', 'county'])
             if st.session_state.get('supplemental_info'):
                 st.json(st.session_state.supplemental_info)
+        
+        with st.expander("Debug: Blue Highlighting Info"):
+            st.write("Terms we're looking for:", ['thence'])
         
         if st.session_state.get('parsed_bearings'):
             with st.expander("Debug: Green Highlighting Info"):
