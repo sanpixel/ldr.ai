@@ -1063,7 +1063,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         
         # Search terms to highlight (exact matches only)
         search_terms = ['land lot', 'district', 'county']
-        thence_terms = ['thence']
+        thence_terms = ['thence', 'thence,']
         
         # Get bearing data from session state if available
         bearing_terms = []
@@ -1156,9 +1156,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent green rectangle for bearing data
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    outline='green',
-                    width=3,
-                    fill=(0, 255, 0, 50)  # Green with 50/255 opacity
+                    fill=(0, 255, 0, 50)  # Green with 50/255 opacity, no outline
                 )
         
         # Convert back to bytes
