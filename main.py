@@ -1077,9 +1077,15 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Find EVIDENCE section
                 if 'EVIDENCE:' in response_text:
                     evidence_section = response_text.split('EVIDENCE:')[1].split('\n\n')[0]
-                    # Extract quoted strings
-                    quoted_pattern = r'"([^"]+)"'
-                    evidence_lines = re.findall(quoted_pattern, evidence_section)
+                    # Extract lines that start with dash
+                    for line in evidence_section.split('\n'):
+                        line = line.strip()
+                        if line.startswith('-'):
+                            # Remove leading dash and strip quotes from start and end
+                            evidence_text = line[1:].strip()
+                            if evidence_text.startswith('"') and evidence_text.endswith('"'):
+                                evidence_text = evidence_text[1:-1]
+                            evidence_lines.append(evidence_text)
             except Exception as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"Evidence parsing failed: {str(e)}")
