@@ -517,8 +517,10 @@ Text to analyze:"""
         reasoning_data['parsing_success_rate'] = parsing_success_rate
         
         if st.session_state.get('debug_enabled', False):
-            st.write(f"🔍 DEBUG: After adding parsing metrics - keys: {list(reasoning_data.keys())}")
-            st.write(f"🔍 DEBUG: Final reasoning_data: {reasoning_data}")
+            with st.expander("🔍 DEBUG: After adding parsing metrics - keys"):
+                st.write(list(reasoning_data.keys()))
+            with st.expander("🔍 DEBUG: Final reasoning_data"):
+                st.write(reasoning_data)
         
         # Save reasoning data to database after all metrics are added
         try:
@@ -2201,6 +2203,12 @@ def main():
                                             
                                             if bearings:
                                                 st.session_state.parsed_bearings = bearings
+                                                # Highlight bearings on PDF preview
+                                                if st.session_state.pdf_image:
+                                                    st.session_state.pdf_image = highlight_supplemental_info_on_image(
+                                                        st.session_state.pdf_image,
+                                                        st.session_state.get('supplemental_info')
+                                                    )
                                                 st.session_state.line_count = len(bearings)
                                                 
                                                 # Populate session state with extracted bearings
@@ -2829,6 +2837,9 @@ def main():
                     if bearing.get('cardinal_ew'):
                         bearing_terms.append(bearing['cardinal_ew'].lower())
                 st.write("Terms we're looking for:", bearing_terms)
+            
+            with st.expander("Debug: Full Parsed Bearings Data"):
+                st.json(st.session_state.parsed_bearings)
 
 if __name__ == "__main__":
     main()
