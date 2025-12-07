@@ -525,7 +525,8 @@ Text to analyze:"""
         # Save reasoning data to database after all metrics are added
         try:
             from utils.classification import save_classification_data
-            if save_classification_data(reasoning_data):
+            pdf_preview = st.session_state.get('pdf_image')
+            if save_classification_data(reasoning_data, pdf_preview):
                 if st.session_state.get('debug_enabled', False):
                     st.success("✅ Classification data saved to database")
             else:
@@ -1847,7 +1848,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.4")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.5")
     
     # Import auth utilities
     try:
@@ -1975,7 +1976,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.0.4")
+    st.title("Legal Description Reader v1.0.5")
     
     # Debug toggle in sidebar
     with st.sidebar:

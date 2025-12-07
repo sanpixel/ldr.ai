@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 
 
-def save_classification_data(classification_entry: Dict[str, Any]) -> bool:
+def save_classification_data(classification_entry: Dict[str, Any], pdf_preview_bytes: Optional[bytes] = None) -> bool:
     """
     Save a single classification entry to the database
     
@@ -23,6 +23,7 @@ def save_classification_data(classification_entry: Dict[str, Any]) -> bool:
             - evidence: str (optional)
             - alternatives: str (optional)
             - timestamp: str (ISO format)
+        pdf_preview_bytes: Optional bytes of the PDF preview image
     
     Returns:
         bool: True if successful, False otherwise
@@ -30,10 +31,15 @@ def save_classification_data(classification_entry: Dict[str, Any]) -> bool:
     try:
         supabase = get_supabase_client()
         
+        # Prepare insert data
+        insert_data = {'reasoning_data': classification_entry}
+        
+        # Add pdf_preview if provided
+        if pdf_preview_bytes:
+            insert_data['pdf_preview'] = pdf_preview_bytes
+        
         # Insert the classification data
-        result = supabase.table('classification_data').insert({
-            'reasoning_data': classification_entry
-        }).execute()
+        result = supabase.table('classification_data').insert(insert_data).execute()
         
         if result.data:
             return True
