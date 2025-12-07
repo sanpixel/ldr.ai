@@ -1851,7 +1851,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.1")
     
     # Import auth utilities
     try:
@@ -1979,7 +1979,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader")
+    st.title("Legal Description Reader v1.0.1")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2255,12 +2255,6 @@ def main():
                                             
                                             if bearings:
                                                 st.session_state.parsed_bearings = bearings
-                                                # Highlight bearings on PDF preview
-                                                if st.session_state.pdf_image:
-                                                    st.session_state.pdf_image = highlight_supplemental_info_on_image(
-                                                        st.session_state.pdf_image,
-                                                        st.session_state.get('supplemental_info')
-                                                    )
                                                 st.session_state.line_count = len(bearings)
                                                 
                                                 # Populate session state with extracted bearings

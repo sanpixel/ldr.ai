@@ -172,6 +172,9 @@ All tasks, bugs, and ideas consolidated in one place.
 ### 6.11 Pre-compile regex patterns
 - [ ] 6.11.1 Patterns compiled on every function call (main.py:430-435)
 
+### 6.12 PDF highlight broken for specific file
+- [ ] 6.12.1 "1994 COBB Book 16131 Page 2451" PDF doesn't show highlights - image fails to render
+
 ## 7. 📝 Documentation
 
 ### 7.1 Create user guide
