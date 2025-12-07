@@ -1154,16 +1154,6 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                     fill=(0, 255, 0, 50)  # Green with 50/255 opacity, no outline
                 )
             
-            # Check if this matches bearing data
-            elif text_raw in bearing_terms or text_raw.replace('.', '') in bearing_terms or text in bearing_terms:
-                # Get bounding box coordinates
-                x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
-                
-                # Draw semi-transparent green rectangle for bearing data
-                draw.rectangle(
-                    [(x, y), (x + w, y + h)],
-                    fill=(0, 255, 0, 50)  # Green with 50/255 opacity, no outline
-                )
         
         # Convert back to bytes
         output = BytesIO()
@@ -1851,7 +1841,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.2")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.3")
     
     # Import auth utilities
     try:
@@ -1979,7 +1969,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.0.2")
+    st.title("Legal Description Reader v1.0.3")
     
     # Debug toggle in sidebar
     with st.sidebar:
