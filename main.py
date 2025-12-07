@@ -1162,8 +1162,14 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         
     except Exception as e:
         # If highlighting fails, return original image
+        import traceback
+        import logging
+        error_details = traceback.format_exc()
+        logging.error(f"HIGHLIGHT ERROR: {str(e)}")
+        logging.error(f"TRACEBACK: {error_details}")
+        st.error(f"Image highlighting failed: {str(e)}")
         if st.session_state.get('debug_enabled', False):
-            st.warning(f"Could not highlight supplemental info: {str(e)}")
+            st.code(error_details)
         return image_bytes
 
 def draw_lines_from_bearings():
@@ -1841,7 +1847,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.3")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.4")
     
     # Import auth utilities
     try:
@@ -1969,7 +1975,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.0.3")
+    st.title("Legal Description Reader v1.0.4")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2866,29 +2872,15 @@ def main():
         
         if st.session_state.get('parsed_bearings'):
             with st.expander("Debug: Green Highlighting Info"):
-                bearing_terms = []
-                for bearing in st.session_state.parsed_bearings:
-                    if bearing.get('degrees'):
-                        bearing_terms.append(str(bearing['degrees']))
-                    if bearing.get('minutes'):
-                        bearing_terms.append(str(bearing['minutes']))
-                    if bearing.get('seconds'):
-                        bearing_terms.append(str(bearing['seconds']))
-                    if bearing.get('distance'):
-                        bearing_terms.append(str(bearing['distance']))
-                    if bearing.get('cardinal_ns'):
-                        bearing_terms.append(bearing['cardinal_ns'].lower())
-                    if bearing.get('cardinal_ew'):
-                        bearing_terms.append(bearing['cardinal_ew'].lower())
-                st.write("Terms we're looking for:", bearing_terms)
+                # Parse evidence from GPT response (same logic as highlight function)
+                evidence_lines = []
+                evidence_words = set()
                 
-                # Debug evidence lines
                 if st.session_state.get('gpt_response'):
                     import re
                     response_text = st.session_state.gpt_response
                     if 'EVIDENCE:' in response_text:
                         evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
-                        evidence_lines = []
                         parts = re.split(r'- "', evidence_section)
                         for part in parts[1:]:
                             if '"' in part:
@@ -2897,11 +2889,11 @@ def main():
                                     clean_text = evidence_text.strip().strip('"')
                                     evidence_lines.append(clean_text)
                         # Also split into individual words
-                        evidence_words = set()
                         for line in evidence_lines:
                             evidence_words.update(line.split())
-                        st.write("Evidence lines we're looking for:", evidence_lines)
-                        st.write("Evidence words we're looking for:", evidence_words)
+                
+                st.write("Evidence lines we're looking for:", evidence_lines)
+                st.write("Evidence words we're looking for:", evidence_words)
             
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
