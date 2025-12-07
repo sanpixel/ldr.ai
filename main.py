@@ -1068,7 +1068,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         # Get bearing data from session state if available
         bearing_terms = []
         evidence_lines = []
-        evidence_words = []
+        evidence_words = set()
         
         # Parse evidence from GPT response
         if st.session_state.get('gpt_response'):
@@ -1089,9 +1089,9 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                                 clean_text = evidence_text.strip().strip('"')
                                 evidence_lines.append(clean_text)
                     # Also split evidence lines into individual words for matching
-                    evidence_words = []
+                    evidence_words = set()
                     for line in evidence_lines:
-                        evidence_words.extend(line.split())
+                        evidence_words.update(line.split())
             except Exception as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"Evidence parsing failed: {str(e)}")
@@ -1851,7 +1851,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.1")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.2")
     
     # Import auth utilities
     try:
@@ -1979,7 +1979,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.0.1")
+    st.title("Legal Description Reader v1.0.2")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2907,9 +2907,9 @@ def main():
                                     clean_text = evidence_text.strip().strip('"')
                                     evidence_lines.append(clean_text)
                         # Also split into individual words
-                        evidence_words = []
+                        evidence_words = set()
                         for line in evidence_lines:
-                            evidence_words.extend(line.split())
+                            evidence_words.update(line.split())
                         st.write("Evidence lines we're looking for:", evidence_lines)
                         st.write("Evidence words we're looking for:", evidence_words)
             
