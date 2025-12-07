@@ -34,9 +34,10 @@ def save_classification_data(classification_entry: Dict[str, Any], pdf_preview_b
         # Prepare insert data
         insert_data = {'reasoning_data': classification_entry}
         
-        # Add pdf_preview if provided
+        # Add pdf_preview if provided (encode as base64 for JSON compatibility)
         if pdf_preview_bytes:
-            insert_data['pdf_preview'] = pdf_preview_bytes
+            import base64
+            insert_data['pdf_preview'] = base64.b64encode(pdf_preview_bytes).decode('utf-8')
         
         # Insert the classification data
         result = supabase.table('classification_data').insert(insert_data).execute()
@@ -232,3 +233,34 @@ def test_database_connection() -> bool:
     except Exception as e:
         st.error(f"Database connection test failed: {str(e)}")
         return False
+
+
+def get_latest_pdf_preview() -> Optional[bytes]:
+    """
+    Get the most recent PDF preview from the database
+    
+    Returns:
+        bytes: PDF preview image bytes, or None if not found
+    """
+    try:
+        supabase = get_supabase_client()
+        
+        # Get the most recent entry with a pdf_preview
+        result = supabase.table('classification_data')\
+            .select('pdf_preview')\
+            .not_.is_('pdf_preview', 'null')\
+            .order('inserted_at', desc=True)\
+            .limit(1)\
+            .execute()
+        
+        if result.data and len(result.data) > 0:
+            pdf_preview_b64 = result.data[0].get('pdf_preview')
+            if pdf_preview_b64:
+                import base64
+                return base64.b64decode(pdf_preview_b64)
+        
+        return None
+        
+    except Exception as e:
+        st.error(f"Error retrieving PDF preview: {str(e)}")
+        return None

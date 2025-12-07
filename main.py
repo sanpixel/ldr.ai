@@ -1848,7 +1848,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.5")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.0.6")
     
     # Import auth utilities
     try:
@@ -1976,7 +1976,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.0.5")
+    st.title("Legal Description Reader v1.0.6")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2461,10 +2461,16 @@ def main():
         except:
             pass  # Ignore auth errors in this section
             
-        if st.session_state.pdf_image:
+        # Try to get image from DB first, fallback to session state
+        from utils.classification import get_latest_pdf_preview
+        pdf_image = get_latest_pdf_preview()
+        if not pdf_image:
+            pdf_image = st.session_state.pdf_image
+        
+        if pdf_image:
             # Check if this is the default example or user-uploaded
             caption = 'Example: Gwinnett County Deed' if not hasattr(st.session_state, 'user_uploaded_pdf') else 'PDF Preview - please verify orientation'
-            st.image(st.session_state.pdf_image, caption=caption, use_container_width=True)
+            st.image(pdf_image, caption=caption, use_container_width=True)
 
     # Display processing messages if available (from PDF processing)
     if hasattr(st.session_state, 'processing_messages') and st.session_state.processing_messages:
@@ -2857,10 +2863,16 @@ def main():
             st.metric("County", st.session_state.supplemental_info.get('county', 'N/A'))
 
     # Display PDF image if available
-    if st.session_state.pdf_image:
+    # Try to get image from DB first, fallback to session state
+    from utils.classification import get_latest_pdf_preview
+    pdf_image = get_latest_pdf_preview()
+    if not pdf_image:
+        pdf_image = st.session_state.pdf_image
+    
+    if pdf_image:
         st.subheader("PDF Document")
         st.write("Please review your document shown below to verify the system correctly recognized the meets and bounds")
-        st.image(st.session_state.pdf_image, caption="PDF First Page", use_container_width=True)
+        st.image(pdf_image, caption="PDF First Page", use_container_width=True)
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
