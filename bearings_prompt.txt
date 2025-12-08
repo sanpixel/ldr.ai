@@ -23,7 +23,7 @@ Provide your analysis in this exact format:
 CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
 CONFIDENCE: [high|medium|low]
 REASONING: [explain why you chose this classification]
-EVIDENCE: [all of the specific examples that supports your decision]
+EVIDENCE: [all of the specific examples that supports your decision, not some of them, dont respond with "many more similar examples", list them all so we can properly help you further your analyses accuracy]
 RANK_ALTERNATIVES:
   - Second choice from txt prompt: [classification] (reason)
   - Third choice from txt prompt: [classification] (reason)
