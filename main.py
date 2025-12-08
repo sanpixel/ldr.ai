@@ -1854,7 +1854,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.1.1")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.1.2")
     
     # Import auth utilities
     try:
@@ -1982,7 +1982,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.1.1")
+    st.title("Legal Description Reader v1.1.2")
     
     # Debug toggle in sidebar
     with st.sidebar:

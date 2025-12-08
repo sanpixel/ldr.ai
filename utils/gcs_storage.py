@@ -15,11 +15,15 @@ import uuid
 def get_gcs_client():
     """Get authenticated GCS client using service account key from environment"""
     try:
-        # Get service account key from environment variable
-        sa_key_json = os.getenv('GCS_SERVICE_ACCOUNT_KEY')
-        if not sa_key_json:
+        # Get service account key from environment variable (base64 encoded)
+        sa_key_b64 = os.getenv('GCS_SERVICE_ACCOUNT_KEY')
+        if not sa_key_b64:
             st.error("GCS_SERVICE_ACCOUNT_KEY not found in environment")
             return None
+        
+        # Decode from base64
+        import base64
+        sa_key_json = base64.b64decode(sa_key_b64).decode('utf-8')
         
         # Parse JSON key
         sa_key_dict = json.loads(sa_key_json)
