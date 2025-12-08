@@ -525,8 +525,14 @@ Text to analyze:"""
         # Save reasoning data to database after all metrics are added
         try:
             from utils.classification import save_classification_data
-            pdf_preview = st.session_state.get('pdf_image')
-            if save_classification_data(reasoning_data, pdf_preview):
+            from utils.gcs_storage import upload_pdf_preview
+            
+            # Upload PDF preview to GCS if available
+            pdf_preview_url = None
+            if st.session_state.get('pdf_image'):
+                pdf_preview_url = upload_pdf_preview(st.session_state.pdf_image, filename_prefix="highlighted")
+            
+            if save_classification_data(reasoning_data, pdf_preview_url):
                 if st.session_state.get('debug_enabled', False):
                     st.success("✅ Classification data saved to database")
             else:
@@ -1848,7 +1854,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.1.0")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.1.1")
     
     # Import auth utilities
     try:
@@ -1976,7 +1982,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.1.0")
+    st.title("Legal Description Reader v1.1.1")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2461,11 +2467,10 @@ def main():
         except:
             pass  # Ignore auth errors in this section
             
-        # Try to get image from DB first, fallback to session state
-        from utils.classification import get_latest_pdf_preview
-        pdf_image = get_latest_pdf_preview()
-        if not pdf_image:
-            pdf_image = st.session_state.pdf_image
+        # Try to get image URL from GCS first, fallback to session state
+        from utils.gcs_storage import get_latest_pdf_preview_url
+        pdf_image_url = get_latest_pdf_preview_url()
+        pdf_image = pdf_image_url if pdf_image_url else st.session_state.pdf_image
         
         if pdf_image:
             # Check if this is the default example or user-uploaded
@@ -2863,11 +2868,10 @@ def main():
             st.metric("County", st.session_state.supplemental_info.get('county', 'N/A'))
 
     # Display PDF image if available
-    # Try to get image from DB first, fallback to session state
-    from utils.classification import get_latest_pdf_preview
-    pdf_image = get_latest_pdf_preview()
-    if not pdf_image:
-        pdf_image = st.session_state.pdf_image
+    # Try to get image URL from GCS first, fallback to session state
+    from utils.gcs_storage import get_latest_pdf_preview_url
+    pdf_image_url = get_latest_pdf_preview_url()
+    pdf_image = pdf_image_url if pdf_image_url else st.session_state.pdf_image
     
     if pdf_image:
         st.subheader("PDF Document")

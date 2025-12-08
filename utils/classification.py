@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 
 
-def save_classification_data(classification_entry: Dict[str, Any], pdf_preview_bytes: Optional[bytes] = None) -> bool:
+def save_classification_data(classification_entry: Dict[str, Any], pdf_preview_url: Optional[str] = None) -> bool:
     """
     Save a single classification entry to the database
     
@@ -23,7 +23,7 @@ def save_classification_data(classification_entry: Dict[str, Any], pdf_preview_b
             - evidence: str (optional)
             - alternatives: str (optional)
             - timestamp: str (ISO format)
-        pdf_preview_bytes: Optional bytes of the PDF preview image
+        pdf_preview_url: Optional GCS URL of the PDF preview image
     
     Returns:
         bool: True if successful, False otherwise
@@ -34,10 +34,9 @@ def save_classification_data(classification_entry: Dict[str, Any], pdf_preview_b
         # Prepare insert data
         insert_data = {'reasoning_data': classification_entry}
         
-        # Add pdf_preview if provided (encode as base64 for JSON compatibility)
-        if pdf_preview_bytes:
-            import base64
-            insert_data['pdf_preview'] = base64.b64encode(pdf_preview_bytes).decode('utf-8')
+        # Add pdf_preview URL if provided
+        if pdf_preview_url:
+            insert_data['pdf_preview'] = pdf_preview_url
         
         # Insert the classification data
         result = supabase.table('classification_data').insert(insert_data).execute()
@@ -235,47 +234,4 @@ def test_database_connection() -> bool:
         return False
 
 
-def get_latest_pdf_preview() -> Optional[bytes]:
-    """
-    Get the most recent PDF preview from the database
-    
-    Returns:
-        bytes: PDF preview image bytes, or None if not found
-    """
-    try:
-        supabase = get_supabase_client()
-        
-        # Get the most recent entry with a pdf_preview
-        result = supabase.table('classification_data')\
-            .select('pdf_preview')\
-            .not_.is_('pdf_preview', 'null')\
-            .order('inserted_at', desc=True)\
-            .limit(1)\
-            .execute()
-        
-        if result.data and len(result.data) > 0:
-            pdf_preview_data = result.data[0].get('pdf_preview')
-            if pdf_preview_data:
-                # If it's already bytes, return as-is
-                if isinstance(pdf_preview_data, bytes):
-                    return pdf_preview_data
-                # Supabase may return BYTEA as hex string
-                if isinstance(pdf_preview_data, str):
-                    # Try base64 decode first
-                    try:
-                        import base64
-                        return base64.b64decode(pdf_preview_data)
-                    except:
-                        pass
-                    # Try hex decode if starts with \x or \\x
-                    if pdf_preview_data.startswith('\\x'):
-                        return bytes.fromhex(pdf_preview_data[2:])
-                    elif pdf_preview_data.startswith('x'):
-                        return bytes.fromhex(pdf_preview_data[1:])
-                return pdf_preview_data
-        
-        return None
-        
-    except Exception as e:
-        st.error(f"Error retrieving PDF preview: {str(e)}")
-        return None
+

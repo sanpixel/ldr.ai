@@ -14,3 +14,4 @@ python-jose[cryptography]
 streamlit-oauth
 streamlit-js
 streamlit-url-fragment
+google-cloud-storage
