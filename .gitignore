@@ -38,3 +38,9 @@ ENV/
 # AutoCAD LISP files (keep local only)
 *.lsp
 *.LSP
+
+# Hypothesis testing cache
+.hypothesis/
+
+# Pytest cache
+.pytest_cache/

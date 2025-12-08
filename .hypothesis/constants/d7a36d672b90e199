@@ -1,4 +1,0 @@
-# file: C:\dev\ldr.ai\webhook_print_server.py
-# hypothesis_version: 6.148.7
-
-[200, 401, 403, '%Y-%m-%d %H:%M:%S', '/health', '/print', '10', '127.0.0.1', '8000', '=', 'API_KEY', 'Config', 'GET', 'HOST', 'INFO', 'Invalid API key', 'LOG_LEVEL', 'MAX_DOCUMENT_SIZE', 'Missing API key', 'PORT', 'POST', 'Webhook Print Server', 'X-API-Key', 'Z', '__main__', 'error', 'healthy', 'message', 'status', 'success', 'timestamp']
