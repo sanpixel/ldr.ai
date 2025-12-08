@@ -1082,7 +1082,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         # Get bearing data from session state if available
         bearing_terms = []
         evidence_lines = []
-        evidence_words = set()
+        evidence_words = []
         
         # Parse evidence from GPT response
         if st.session_state.get('gpt_response'):
@@ -1105,9 +1105,8 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                             if evidence_text:
                                 evidence_lines.append(evidence_text)
                     # Also split evidence lines into individual words for matching
-                    evidence_words = set()
                     for line in evidence_lines:
-                        evidence_words.update(line.split())
+                        evidence_words.extend(line.split())
             except Exception as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"Evidence parsing failed: {str(e)}")
@@ -2907,26 +2906,31 @@ def main():
             with st.expander("Debug: Green Highlighting Info"):
                 # Parse evidence from GPT response (same logic as highlight function)
                 evidence_lines = []
-                evidence_words = set()
+                evidence_words = []
                 
                 if st.session_state.get('gpt_response'):
                     import re
                     response_text = st.session_state.gpt_response
                     if 'EVIDENCE:' in response_text:
                         evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
-                        parts = re.split(r'- "', evidence_section)
-                        for part in parts[1:]:
-                            if '"' in part:
-                                evidence_text = part.split('"')[0]
-                                if evidence_text.strip():
-                                    clean_text = evidence_text.strip().strip('"')
-                                    evidence_lines.append(clean_text)
-                        # Also split into individual words
+                        # Split on newlines to get each line
+                        lines = evidence_section.strip().split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if line.startswith('- '):
+                                # Remove the "- " prefix
+                                evidence_text = line[2:].strip()
+                                # Remove quotes if present (handles both "text" and text formats)
+                                if evidence_text.startswith('"') and evidence_text.endswith('"'):
+                                    evidence_text = evidence_text[1:-1]
+                                if evidence_text:
+                                    evidence_lines.append(evidence_text)
+                        # Also split evidence lines into individual words for matching
                         for line in evidence_lines:
-                            evidence_words.update(line.split())
+                            evidence_words.extend(line.split())
                 
                 st.write("Evidence lines we're looking for:", evidence_lines)
-                st.write("Evidence words we're looking for:", list(evidence_words))
+                st.write("Evidence words we're looking for:", evidence_words)
             
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
