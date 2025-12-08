@@ -1069,7 +1069,14 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         draw = ImageDraw.Draw(image, 'RGBA')
         
         # Search terms to highlight (exact matches only)
-        search_terms = ['land lot', 'district', 'county']
+        search_terms = []
+        if st.session_state.get('supplemental_info'):
+            for key, value in st.session_state.supplemental_info.items():
+                # Add field names split into words
+                search_terms.extend(key.split('_'))
+                # Add actual values
+                if value:
+                    search_terms.append(str(value).lower())
         thence_terms = ['thence', 'thence,']
         
         # Get bearing data from session state if available
@@ -1085,16 +1092,18 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Find EVIDENCE section
                 if 'EVIDENCE:' in response_text:
                     evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
-                    # Split on "- " pattern (handles both newlines and single-line format)
-                    parts = re.split(r'- "', evidence_section)
-                    for part in parts[1:]:  # Skip first empty part
-                        # Find the closing quote - look for quote followed by newline or end
-                        if '"' in part:
-                            evidence_text = part.split('"')[0]
-                            if evidence_text.strip():
-                                # Strip any leading/trailing quotes that might remain
-                                clean_text = evidence_text.strip().strip('"')
-                                evidence_lines.append(clean_text)
+                    # Split on newlines to get each line
+                    lines = evidence_section.strip().split('\n')
+                    for line in lines:
+                        line = line.strip()
+                        if line.startswith('- '):
+                            # Remove the "- " prefix
+                            evidence_text = line[2:].strip()
+                            # Remove quotes if present (handles both "text" and text formats)
+                            if evidence_text.startswith('"') and evidence_text.endswith('"'):
+                                evidence_text = evidence_text[1:-1]
+                            if evidence_text:
+                                evidence_lines.append(evidence_text)
                     # Also split evidence lines into individual words for matching
                     evidence_words = set()
                     for line in evidence_lines:
@@ -2880,7 +2889,14 @@ def main():
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
-            st.write("Terms we're looking for:", ['land', 'lot', 'district', 'county'])
+            # Build the actual search terms the same way the highlight function does
+            search_terms = []
+            if st.session_state.get('supplemental_info'):
+                for key, value in st.session_state.supplemental_info.items():
+                    search_terms.extend(key.split('_'))
+                    if value:
+                        search_terms.append(str(value).lower())
+            st.write("Terms we're looking for:", search_terms)
             if st.session_state.get('supplemental_info'):
                 st.json(st.session_state.supplemental_info)
         
