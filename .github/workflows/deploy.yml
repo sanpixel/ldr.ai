@@ -28,10 +28,6 @@ jobs:
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY_RAW }}'
     
-    - name: Create GCS credentials file
-      run: |
-        echo "${{ secrets.FU_ED }}" | base64 -d > /tmp/gcs-key.json
-    
     - name: Deploy to Cloud Run
       id: deploy
       uses: google-github-actions/deploy-cloudrun@v2
@@ -48,7 +44,7 @@ jobs:
           ENVIRONMENT=production
           APP_URL=https://ldr.clocknumbers.com
         secrets: |
-          GCS_SERVICE_ACCOUNT_KEY=${{ secrets.FU_ED }}
+          GCS_SERVICE_ACCOUNT_KEY=gcs-service-account-key:latest
         labels: |
           managed-by=github-actions
           commit-sha=${{ github.sha }}
