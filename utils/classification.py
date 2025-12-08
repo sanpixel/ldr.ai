@@ -256,11 +256,22 @@ def get_latest_pdf_preview() -> Optional[bytes]:
         if result.data and len(result.data) > 0:
             pdf_preview_data = result.data[0].get('pdf_preview')
             if pdf_preview_data:
-                # Supabase returns BYTEA as hex string (starts with \x)
-                if isinstance(pdf_preview_data, str) and pdf_preview_data.startswith('\\x'):
-                    # Remove \x prefix and decode from hex
-                    return bytes.fromhex(pdf_preview_data[2:])
-                # If already bytes, return as-is
+                # If it's already bytes, return as-is
+                if isinstance(pdf_preview_data, bytes):
+                    return pdf_preview_data
+                # Supabase may return BYTEA as hex string
+                if isinstance(pdf_preview_data, str):
+                    # Try base64 decode first
+                    try:
+                        import base64
+                        return base64.b64decode(pdf_preview_data)
+                    except:
+                        pass
+                    # Try hex decode if starts with \x or \\x
+                    if pdf_preview_data.startswith('\\x'):
+                        return bytes.fromhex(pdf_preview_data[2:])
+                    elif pdf_preview_data.startswith('x'):
+                        return bytes.fromhex(pdf_preview_data[1:])
                 return pdf_preview_data
         
         return None
