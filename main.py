@@ -2926,7 +2926,7 @@ def main():
                             evidence_words.update(line.split())
                 
                 st.write("Evidence lines we're looking for:", evidence_lines)
-                st.write("Evidence words we're looking for:", evidence_words)
+                st.write("Evidence words we're looking for:", list(evidence_words))
             
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
