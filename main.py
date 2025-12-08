@@ -1106,7 +1106,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                                 evidence_lines.append(evidence_text)
                     # Also split evidence lines into individual words for matching
                     for line in evidence_lines:
-                        evidence_words.extend(line.split())
+                        evidence_words.extend(word.lower() for word in line.split())
             except Exception as e:
                 if st.session_state.get('debug_enabled', False):
                     st.warning(f"Evidence parsing failed: {str(e)}")
@@ -1159,7 +1159,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 )
             
             # Check if this matches evidence lines (full line match) or evidence words
-            elif any(evidence_line in text_raw for evidence_line in evidence_lines) or text_raw in evidence_words:
+            elif any(evidence_line in text_raw for evidence_line in evidence_lines) or text in evidence_words:
                 # Get bounding box coordinates
                 x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
                 
@@ -2927,7 +2927,7 @@ def main():
                                     evidence_lines.append(evidence_text)
                         # Also split evidence lines into individual words for matching
                         for line in evidence_lines:
-                            evidence_words.extend(line.split())
+                            evidence_words.extend(word.lower() for word in line.split())
                 
                 st.write("Evidence lines we're looking for:", evidence_lines)
                 st.write("Evidence words we're looking for:", evidence_words)
