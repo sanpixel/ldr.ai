@@ -2517,8 +2517,8 @@ def main():
                             reader.onloadend = async () => {{
                                 const base64data = reader.result.split(',')[1];
                                 
-                                // Send to local print server
-                                const printResponse = await fetch('http://localhost:8000/print', {{
+                                // Send to print server
+                                const printResponse = await fetch('https://e05c593544d6.ngrok-free.app/print', {{
                                     method: 'POST',
                                     headers: {{
                                         'Content-Type': 'application/json',
