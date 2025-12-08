@@ -1158,8 +1158,8 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                     fill=(0, 0, 255, 50)  # Blue with 50/255 opacity, no outline
                 )
             
-            # Check if this matches evidence lines (full line match) or evidence words
-            elif any(evidence_line in text_raw for evidence_line in evidence_lines) or text in evidence_words:
+            # Check if this matches evidence words
+            elif text in evidence_words:
                 # Get bounding box coordinates
                 x, y, w, h = ocr_data['left'][i], ocr_data['top'][i], ocr_data['width'][i], ocr_data['height'][i]
                 
@@ -1862,7 +1862,7 @@ def show_video_intro():
     """, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(layout="wide", page_title="Legal Description Reader v1.1.2")
+    st.set_page_config(layout="wide", page_title="Legal Description Reader")
     
     # Import auth utilities
     try:
@@ -1990,7 +1990,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.1.2")
+    st.title("Legal Description Reader v1.1.5")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2490,54 +2490,47 @@ def main():
                 try:
                     from streamlit_js import st_js
                     import base64
+                    import requests
                     
-                    # Get the image URL
+                    # Fetch image server-side to avoid CORS issues
                     if isinstance(pdf_image, str):
-                        image_url = pdf_image
+                        # Fetch from URL
+                        img_response = requests.get(pdf_image)
+                        pdf_bytes = img_response.content
                     else:
-                        # If it's bytes, we need to convert to data URL
-                        pdf_b64 = base64.b64encode(pdf_image).decode('utf-8')
-                        image_url = f"data:image/png;base64,{pdf_b64}"
+                        # Already bytes
+                        pdf_bytes = pdf_image
+                    
+                    # Convert to base64
+                    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
                     
                     # Get API key from environment
                     api_key = os.getenv('PRINT_API_KEY', 'your-secret-api-key-here')
                     
-                    # JavaScript code to fetch image and send to local print server
+                    # JavaScript code to send to print server
                     js_code = f"""
                     (async () => {{
                         try {{
-                            // Fetch the image
-                            const response = await fetch('{image_url}');
-                            const blob = await response.blob();
+                            // Send to print server
+                            const printResponse = await fetch('https://e05c593544d6.ngrok-free.app/print', {{
+                                method: 'POST',
+                                headers: {{
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': '{api_key}'
+                                }},
+                                body: JSON.stringify({{
+                                    document: '{pdf_b64}',
+                                    format: 'pdf',
+                                    filename: 'highlighted_legal_description.pdf'
+                                }})
+                            }});
                             
-                            // Convert to base64
-                            const reader = new FileReader();
-                            reader.readAsDataURL(blob);
-                            
-                            reader.onloadend = async () => {{
-                                const base64data = reader.result.split(',')[1];
-                                
-                                // Send to print server
-                                const printResponse = await fetch('https://e05c593544d6.ngrok-free.app/print', {{
-                                    method: 'POST',
-                                    headers: {{
-                                        'Content-Type': 'application/json',
-                                        'X-API-Key': '{api_key}'
-                                    }},
-                                    body: JSON.stringify({{
-                                        document: base64data,
-                                        format: 'pdf',
-                                        filename: 'highlighted_legal_description.pdf'
-                                    }})
-                                }});
-                                
-                                if (printResponse.ok) {{
-                                    return 'success';
-                                }} else {{
-                                    const error = await printResponse.json();
-                                    return 'error: ' + error.error;
-                                }}
-                            }};
+                            if (printResponse.ok) {{
+                                return 'success';
+                            }} else {{
+                                const error = await printResponse.json();
+                                return 'error: ' + error.error;
+                            }}
                         }} catch (error) {{
                             return 'error: ' + error.message;
                         }}
