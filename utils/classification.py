@@ -254,14 +254,14 @@ def get_latest_pdf_preview() -> Optional[bytes]:
             .execute()
         
         if result.data and len(result.data) > 0:
-            pdf_preview_b64 = result.data[0].get('pdf_preview')
-            if pdf_preview_b64:
-                import base64
-                # Add padding if needed
-                missing_padding = len(pdf_preview_b64) % 4
-                if missing_padding:
-                    pdf_preview_b64 += '=' * (4 - missing_padding)
-                return base64.b64decode(pdf_preview_b64)
+            pdf_preview_data = result.data[0].get('pdf_preview')
+            if pdf_preview_data:
+                # Supabase returns BYTEA as hex string (starts with \x)
+                if isinstance(pdf_preview_data, str) and pdf_preview_data.startswith('\\x'):
+                    # Remove \x prefix and decode from hex
+                    return bytes.fromhex(pdf_preview_data[2:])
+                # If already bytes, return as-is
+                return pdf_preview_data
         
         return None
         
