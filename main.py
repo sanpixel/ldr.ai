@@ -2488,41 +2488,70 @@ def main():
             # Add print button for highlighted PDF
             if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
                 try:
-                    import requests
+                    from streamlit_js import st_js
                     import base64
                     
-                    # Get the highlighted PDF image bytes
+                    # Get the image URL
                     if isinstance(pdf_image, str):
-                        # If it's a URL, fetch it
-                        img_response = requests.get(pdf_image)
-                        pdf_bytes = img_response.content
+                        image_url = pdf_image
                     else:
-                        # If it's already bytes
-                        pdf_bytes = pdf_image
+                        # If it's bytes, we need to convert to data URL
+                        pdf_b64 = base64.b64encode(pdf_image).decode('utf-8')
+                        image_url = f"data:image/png;base64,{pdf_b64}"
                     
-                    # Base64 encode
-                    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                    # Get API key from environment
+                    api_key = os.getenv('PRINT_API_KEY', 'your-secret-api-key-here')
                     
-                    # Send to print server
-                    print_response = requests.post(
-                        'http://localhost:8000/print',
-                        headers={'X-API-Key': os.getenv('PRINT_API_KEY', 'my-custom-key')},
-                        json={
-                            'document': pdf_b64,
-                            'format': 'pdf',
-                            'filename': 'highlighted_legal_description.pdf'
-                        },
-                        timeout=30
-                    )
+                    # JavaScript code to fetch image and send to local print server
+                    js_code = f"""
+                    (async () => {{
+                        try {{
+                            // Fetch the image
+                            const response = await fetch('{image_url}');
+                            const blob = await response.blob();
+                            
+                            // Convert to base64
+                            const reader = new FileReader();
+                            reader.readAsDataURL(blob);
+                            
+                            reader.onloadend = async () => {{
+                                const base64data = reader.result.split(',')[1];
+                                
+                                // Send to local print server
+                                const printResponse = await fetch('http://localhost:8000/print', {{
+                                    method: 'POST',
+                                    headers: {{
+                                        'Content-Type': 'application/json',
+                                        'X-API-Key': '{api_key}'
+                                    }},
+                                    body: JSON.stringify({{
+                                        document: base64data,
+                                        format: 'pdf',
+                                        filename: 'highlighted_legal_description.pdf'
+                                    }})
+                                }});
+                                
+                                if (printResponse.ok) {{
+                                    return 'success';
+                                }} else {{
+                                    const error = await printResponse.json();
+                                    return 'error: ' + error.error;
+                                }}
+                            }};
+                        }} catch (error) {{
+                            return 'error: ' + error.message;
+                        }}
+                    }})();
+                    """
                     
-                    if print_response.status_code == 200:
-                        st.success("✅ Document sent to printer!")
-                    else:
-                        error_msg = print_response.json().get('error', 'Unknown error')
-                        st.error(f"❌ Print failed: {error_msg}")
+                    result = st_js(js_code, key="print_pdf_js")
+                    
+                    if result:
+                        if result == 'success':
+                            st.success("✅ Document sent to printer!")
+                        elif result.startswith('error:'):
+                            st.error(f"❌ Print failed: {result[7:]}")
                         
-                except requests.exceptions.ConnectionError:
-                    st.error("❌ Could not connect to print server. Make sure webhook_print_server.py is running.")
                 except Exception as e:
                     st.error(f"❌ Print error: {str(e)}")
 
