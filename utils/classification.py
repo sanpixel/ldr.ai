@@ -257,6 +257,10 @@ def get_latest_pdf_preview() -> Optional[bytes]:
             pdf_preview_b64 = result.data[0].get('pdf_preview')
             if pdf_preview_b64:
                 import base64
+                # Add padding if needed
+                missing_padding = len(pdf_preview_b64) % 4
+                if missing_padding:
+                    pdf_preview_b64 += '=' * (4 - missing_padding)
                 return base64.b64decode(pdf_preview_b64)
         
         return None
