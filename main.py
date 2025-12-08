@@ -2484,6 +2484,47 @@ def main():
             # Check if this is the default example or user-uploaded
             caption = 'Example: Gwinnett County Deed' if not hasattr(st.session_state, 'user_uploaded_pdf') else 'PDF Preview - please verify orientation'
             st.image(pdf_image, caption=caption, use_container_width=True)
+            
+            # Add print button for highlighted PDF
+            if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
+                try:
+                    import requests
+                    import base64
+                    
+                    # Get the highlighted PDF image bytes
+                    if isinstance(pdf_image, str):
+                        # If it's a URL, fetch it
+                        img_response = requests.get(pdf_image)
+                        pdf_bytes = img_response.content
+                    else:
+                        # If it's already bytes
+                        pdf_bytes = pdf_image
+                    
+                    # Base64 encode
+                    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                    
+                    # Send to print server
+                    print_response = requests.post(
+                        'http://localhost:8000/print',
+                        headers={'X-API-Key': os.getenv('PRINT_API_KEY', 'my-custom-key')},
+                        json={
+                            'document': pdf_b64,
+                            'format': 'pdf',
+                            'filename': 'highlighted_legal_description.pdf'
+                        },
+                        timeout=30
+                    )
+                    
+                    if print_response.status_code == 200:
+                        st.success("✅ Document sent to printer!")
+                    else:
+                        error_msg = print_response.json().get('error', 'Unknown error')
+                        st.error(f"❌ Print failed: {error_msg}")
+                        
+                except requests.exceptions.ConnectionError:
+                    st.error("❌ Could not connect to print server. Make sure webhook_print_server.py is running.")
+                except Exception as e:
+                    st.error(f"❌ Print error: {str(e)}")
 
     # Display processing messages if available (from PDF processing)
     if hasattr(st.session_state, 'processing_messages') and st.session_state.processing_messages:

@@ -15,3 +15,7 @@ streamlit-oauth
 streamlit-js
 streamlit-url-fragment
 google-cloud-storage
+flask
+pywin32
+hypothesis
+pytest
