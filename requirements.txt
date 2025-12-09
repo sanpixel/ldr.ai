@@ -16,5 +16,6 @@ streamlit-js
 streamlit-url-fragment
 google-cloud-storage
 flask
+flask-cors
 hypothesis
 pytest

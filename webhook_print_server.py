@@ -76,11 +76,13 @@ def setup_logging(log_level: str):
 
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from functools import wraps
 from datetime import datetime
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 config = None  # Will be set in main
 print_manager = None  # Will be set in main
 

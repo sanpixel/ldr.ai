@@ -1990,7 +1990,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.1.5")
+    st.title("Legal Description Reader v1.1.6")
     
     # Debug toggle in sidebar
     with st.sidebar:
