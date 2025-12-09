@@ -783,6 +783,8 @@ def initialize_session_state():
         st.session_state.line_count = 4  # Start with 4 lines by default
     if 'draw_lines_section_expanded' not in st.session_state:
         st.session_state.draw_lines_section_expanded = False  # Start collapsed by default
+    if 'auto_print' not in st.session_state:
+        st.session_state.auto_print = False  # Auto-print disabled by default
     
     # Initialize the keys for the input fields
     for i in range(20): # Initialize for a max of 20 lines
@@ -1457,6 +1459,58 @@ def process_pdf(uploaded_file):
                 
                 if bearings:
                     st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
+                    
+                    # Auto-print if enabled
+                    if st.session_state.get('auto_print', False):
+                        try:
+                            from streamlit_js import st_js
+                            import base64
+                            
+                            pdf_image = st.session_state.pdf_image
+                            if pdf_image:
+                                # Convert to base64
+                                pdf_b64 = base64.b64encode(pdf_image).decode('utf-8')
+                                api_key = 'my-custom-key'
+                                
+                                # JavaScript code to send to print server
+                                js_code = f"""
+                                (async () => {{
+                                    try {{
+                                        const printResponse = await fetch('https://51af3d0b9dc4.ngrok-free.app/print', {{
+                                            method: 'POST',
+                                            headers: {{
+                                                'Content-Type': 'application/json',
+                                                'X-API-Key': '{api_key}'
+                                            }},
+                                            body: JSON.stringify({{
+                                                document: '{pdf_b64}',
+                                                format: 'pdf',
+                                                filename: 'highlighted_legal_description.pdf'
+                                            }})
+                                        }});
+                                        
+                                        if (printResponse.ok) {{
+                                            return 'success';
+                                        }} else {{
+                                            const error = await printResponse.json();
+                                            return 'error: ' + error.error;
+                                        }}
+                                    }} catch (error) {{
+                                        return 'error: ' + error.message;
+                                    }}
+                                }})();
+                                """
+                                
+                                result = st_js(js_code, key="auto_print_pdf_js")
+                                
+                                if result:
+                                    if result == 'success':
+                                        st.success("🖨️ Auto-print: Document sent to printer!")
+                                    elif result.startswith('error:'):
+                                        st.error(f"🖨️ Auto-print failed: {result[7:]}")
+                        except Exception as e:
+                            st.error(f"🖨️ Auto-print error: {str(e)}")
+                    
                     return bearings
                 else:
                     st.warning("No bearings found")
@@ -1994,6 +2048,8 @@ def main():
     
     # Debug toggle in sidebar
     with st.sidebar:
+        st.checkbox("🖨️ Auto-print after processing", key="auto_print")
+        
         st.subheader("Debug Controls")
         debug_password = st.text_input("Debug Password", type="password", key="debug_pw")
         if debug_password == "warez":

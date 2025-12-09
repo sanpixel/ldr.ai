@@ -208,32 +208,31 @@ class PrintManager:
             )
         
         try:
-            # Write PDF to temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-                temp_file.write(pdf_data)
-                temp_path = temp_file.name
+            # Get printer handle
+            printer_handle = win32print.OpenPrinter(self.default_printer)
             
-            # Print using Windows API
-            win32api.ShellExecute(
-                0,
-                "print",
-                temp_path,
-                f'/d:"{self.default_printer}"',
-                ".",
-                0
-            )
-            
-            logging.info(f"PDF print job sent: {filename} to {self.default_printer}")
-            
-            # Clean up temp file after a delay (Windows needs time to read it)
-            # Note: In production, you might want a better cleanup strategy
-            
-            return PrintResult(
-                success=True,
-                job_id=None,  # Windows ShellExecute doesn't return job ID
-                error_message=None,
-                timestamp=datetime.utcnow()
-            )
+            try:
+                # Start print job
+                job_id = win32print.StartDocPrinter(printer_handle, 1, (filename, None, "RAW"))
+                win32print.StartPagePrinter(printer_handle)
+                
+                # Send PDF data directly to printer
+                win32print.WritePrinter(printer_handle, pdf_data)
+                
+                # End print job
+                win32print.EndPagePrinter(printer_handle)
+                win32print.EndDocPrinter(printer_handle)
+                
+                logging.info(f"PDF print job sent: {filename} to {self.default_printer}, job_id: {job_id}")
+                
+                return PrintResult(
+                    success=True,
+                    job_id=job_id,
+                    error_message=None,
+                    timestamp=datetime.utcnow()
+                )
+            finally:
+                win32print.ClosePrinter(printer_handle)
             
         except Exception as e:
             logging.error(f"Failed to print PDF: {e}")
