@@ -516,6 +516,33 @@ Text to analyze:"""
         reasoning_data['parsed_bearing_count'] = parsed_count
         reasoning_data['parsing_success_rate'] = parsing_success_rate
         
+        # Parse evidence lines from GPT response
+        evidence_lines = []
+        if 'EVIDENCE:' in result_text:
+            try:
+                evidence_section = result_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
+                lines_evidence = evidence_section.strip().split('\n')
+                for line in lines_evidence:
+                    line = line.strip()
+                    if line.startswith('- '):
+                        evidence_text = line[2:].strip()
+                        if evidence_text.startswith('"') and evidence_text.endswith('"'):
+                            evidence_text = evidence_text[1:-1]
+                        if evidence_text:
+                            evidence_lines.append(evidence_text)
+            except Exception as e:
+                if st.session_state.get('debug_enabled', False):
+                    st.warning(f"Evidence parsing failed: {str(e)}")
+        
+        # Store evidence lines in reasoning data
+        reasoning_data['evidence_lines'] = evidence_lines
+        
+        # Generate evidence words from evidence lines
+        evidence_words = []
+        for line in evidence_lines:
+            evidence_words.extend(word.lower() for word in line.split())
+        reasoning_data['evidence_words'] = evidence_words
+        
         if st.session_state.get('debug_enabled', False):
             with st.expander("🔍 DEBUG: After adding parsing metrics - keys"):
                 st.write(list(reasoning_data.keys()))
@@ -1083,36 +1110,17 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
         
         # Get bearing data from session state if available
         bearing_terms = []
-        evidence_lines = []
         evidence_words = []
         
-        # Parse evidence from GPT response
-        if st.session_state.get('gpt_response'):
-            try:
-                import re
-                response_text = st.session_state.gpt_response
-                # Find EVIDENCE section
-                if 'EVIDENCE:' in response_text:
-                    evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
-                    # Split on newlines to get each line
-                    lines = evidence_section.strip().split('\n')
-                    for line in lines:
-                        line = line.strip()
-                        if line.startswith('- '):
-                            # Remove the "- " prefix
-                            evidence_text = line[2:].strip()
-                            # Remove quotes if present (handles both "text" and text formats)
-                            if evidence_text.startswith('"') and evidence_text.endswith('"'):
-                                evidence_text = evidence_text[1:-1]
-                            if evidence_text:
-                                evidence_lines.append(evidence_text)
-                    # Also split evidence lines into individual words for matching
-                    for line in evidence_lines:
-                        evidence_words.extend(word.lower() for word in line.split())
-            except Exception as e:
-                if st.session_state.get('debug_enabled', False):
-                    st.warning(f"Evidence parsing failed: {str(e)}")
-                evidence_lines = ["parsing did", "not work", "properly"]
+        # Get evidence words from database
+        try:
+            from utils.classification import get_filtered_classification_data
+            recent_data = get_filtered_classification_data(limit=1)
+            if recent_data and len(recent_data) > 0:
+                evidence_words = recent_data[0].get('evidence_words', [])
+        except Exception as e:
+            if st.session_state.get('debug_enabled', False):
+                st.warning(f"Failed to load evidence words from database: {str(e)}")
         
         if st.session_state.get('parsed_bearings'):
             for bearing in st.session_state.parsed_bearings:
@@ -3022,36 +3030,18 @@ def main():
             st.write("Terms we're looking for:", ['thence'])
         
         with st.expander("Debug: Green Highlighting Info"):
-            if st.session_state.get('parsed_bearings'):
-                # Parse evidence from GPT response (same logic as highlight function)
-                evidence_lines = []
-                evidence_words = []
-                
-                if st.session_state.get('gpt_response'):
-                    import re
-                    response_text = st.session_state.gpt_response
-                    if 'EVIDENCE:' in response_text:
-                        evidence_section = response_text.split('EVIDENCE:')[1].split('RANK_ALTERNATIVES')[0]
-                        # Split on newlines to get each line
-                        lines = evidence_section.strip().split('\n')
-                        for line in lines:
-                            line = line.strip()
-                            if line.startswith('- '):
-                                # Remove the "- " prefix
-                                evidence_text = line[2:].strip()
-                                # Remove quotes if present (handles both "text" and text formats)
-                                if evidence_text.startswith('"') and evidence_text.endswith('"'):
-                                    evidence_text = evidence_text[1:-1]
-                                if evidence_text:
-                                    evidence_lines.append(evidence_text)
-                        # Also split evidence lines into individual words for matching
-                        for line in evidence_lines:
-                            evidence_words.extend(word.lower() for word in line.split())
-                
-                st.write("Evidence lines we're looking for:", evidence_lines)
-                st.write("Evidence words we're looking for:", evidence_words)
-            else:
-                st.write("Evidence words we're looking for:", [])
+            try:
+                from utils.classification import get_filtered_classification_data
+                recent_data = get_filtered_classification_data(limit=1)
+                if recent_data and len(recent_data) > 0:
+                    evidence_lines = recent_data[0].get('evidence_lines', [])
+                    evidence_words = recent_data[0].get('evidence_words', [])
+                    st.write("Evidence lines from database:", evidence_lines)
+                    st.write("Evidence words from database:", evidence_words)
+                else:
+                    st.write("No evidence data in database")
+            except Exception as e:
+                st.write(f"Failed to load evidence from database: {str(e)}")
         
         if st.session_state.get('parsed_bearings'):
             with st.expander("Debug: Full Parsed Bearings Data"):
