@@ -2505,7 +2505,7 @@ def main():
                     pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
                     
                     # Get API key from environment
-                    api_key = os.getenv('PRINT_API_KEY', 'your-secret-api-key-here')
+                    api_key = 'my-custom-key'
                     
                     # JavaScript code to send to print server
                     js_code = f"""
@@ -2965,8 +2965,8 @@ def main():
         with st.expander("Debug: Blue Highlighting Info"):
             st.write("Terms we're looking for:", ['thence'])
         
-        if st.session_state.get('parsed_bearings'):
-            with st.expander("Debug: Green Highlighting Info"):
+        with st.expander("Debug: Green Highlighting Info"):
+            if st.session_state.get('parsed_bearings'):
                 # Parse evidence from GPT response (same logic as highlight function)
                 evidence_lines = []
                 evidence_words = []
@@ -2994,7 +2994,10 @@ def main():
                 
                 st.write("Evidence lines we're looking for:", evidence_lines)
                 st.write("Evidence words we're looking for:", evidence_words)
-            
+            else:
+                st.write("Evidence words we're looking for:", [])
+        
+        if st.session_state.get('parsed_bearings'):
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
         
