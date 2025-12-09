@@ -1990,7 +1990,7 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.1.6")
+    st.title("Legal Description Reader v1.1.7")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2512,7 +2512,7 @@ def main():
                     (async () => {{
                         try {{
                             // Send to print server
-                            const printResponse = await fetch('https://e05c593544d6.ngrok-free.app/print', {{
+                            const printResponse = await fetch('https://51af3d0b9dc4.ngrok-free.app/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
