@@ -81,6 +81,108 @@ def upload_pdf_preview(image_bytes: bytes, filename_prefix: str = "preview") -> 
         return None
 
 
+def upload_pdf_file(pdf_bytes: bytes, filename: str) -> Optional[str]:
+    """
+    Upload PDF file to GCS bucket and return signed URL
+    
+    Args:
+        pdf_bytes: PDF file bytes
+        filename: Original filename
+    
+    Returns:
+        str: Signed URL for the uploaded PDF, or None if upload fails
+    """
+    try:
+        client = get_gcs_client()
+        if not client:
+            return None
+        
+        bucket_name = "ldr-ai"
+        bucket = client.bucket(bucket_name)
+        
+        # Use init- prefix with original filename
+        blob_name = f"init-{filename}"
+        
+        # Upload PDF
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(pdf_bytes, content_type='application/pdf')
+        
+        # Generate signed URL (valid for 7 days)
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(days=7),
+            method="GET"
+        )
+        
+        return url
+        
+    except Exception as e:
+        st.error(f"Error uploading PDF to GCS: {str(e)}")
+        return None
+
+
+def upload_pdf_image(image_bytes: bytes, filename: str, prefix: str = "init") -> Optional[str]:
+    """
+    Upload PDF image to GCS bucket and return signed URL
+    
+    Args:
+        image_bytes: PNG image bytes
+        filename: Original filename (without extension)
+        prefix: Prefix for the filename (default: "init")
+    
+    Returns:
+        str: Signed URL for the uploaded image, or None if upload fails
+    """
+    try:
+        client = get_gcs_client()
+        if not client:
+            return None
+        
+        bucket_name = "ldr-ai"
+        bucket = client.bucket(bucket_name)
+        
+        # Use prefix with original filename
+        blob_name = f"{prefix}-{filename}.png"
+        
+        # Upload image
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(image_bytes, content_type='image/png')
+        
+        # Generate signed URL (valid for 7 days)
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(days=7),
+            method="GET"
+        )
+        
+        return url
+        
+    except Exception as e:
+        st.error(f"Error uploading image to GCS: {str(e)}")
+        return None
+
+
+def download_image_from_gcs(url: str) -> Optional[bytes]:
+    """
+    Download image from GCS URL
+    
+    Args:
+        url: GCS signed URL
+    
+    Returns:
+        bytes: Image bytes, or None if download fails
+    """
+    try:
+        import requests
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.content
+        return None
+    except Exception as e:
+        st.error(f"Error downloading image from GCS: {str(e)}")
+        return None
+
+
 def get_latest_pdf_preview_url() -> Optional[str]:
     """
     Get the most recent PDF preview URL from the database

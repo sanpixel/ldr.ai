@@ -556,8 +556,11 @@ Text to analyze:"""
             
             # Upload PDF preview to GCS if available
             pdf_preview_url = None
-            if st.session_state.get('pdf_image'):
-                pdf_preview_url = upload_pdf_preview(st.session_state.pdf_image, filename_prefix="highlighted")
+            if st.session_state.get('image_url'):
+                from utils.gcs_storage import download_image_from_gcs
+                image_bytes = download_image_from_gcs(st.session_state.image_url)
+                if image_bytes:
+                    pdf_preview_url = upload_pdf_preview(image_bytes, filename_prefix="highlighted")
             
             if save_classification_data(reasoning_data, pdf_preview_url):
                 if st.session_state.get('debug_enabled', False):
@@ -791,17 +794,19 @@ def initialize_session_state():
             example_pdf_path = "GWINNETT Deed Book 59715 Page 467.pdf"
             if os.path.exists(example_pdf_path):
                 from pdf2image import convert_from_path
+                from utils.gcs_storage import upload_pdf_image
                 images = convert_from_path(example_pdf_path, first_page=1, last_page=1, dpi=150)
                 if images:
                     img_byte_arr = BytesIO()
                     images[0].save(img_byte_arr, format='PNG')
-                    st.session_state.pdf_image = img_byte_arr.getvalue()
-                else:
-                    st.session_state.pdf_image = None
-            else:
-                st.session_state.pdf_image = None
+                    image_bytes = img_byte_arr.getvalue()
+                    # Upload example to GCS
+                    example_url = upload_pdf_image(image_bytes, "example-gwinnett", "init")
+                    if example_url:
+                        st.session_state.image_url = example_url
+                        st.session_state.filename = "GWINNETT Deed Book 59715 Page 467.pdf"
         except Exception:
-            st.session_state.pdf_image = None
+            pass
     if 'supplemental_info' not in st.session_state:
         st.session_state.supplemental_info = None
     if 'manual_bearing' not in st.session_state:
@@ -1274,10 +1279,18 @@ def process_image(uploaded_file):
         image = PILImage.open(uploaded_file)
         
         # Store preview image (same as PDF)
+        # Upload image to GCS
         img_byte_arr = BytesIO()
         image.save(img_byte_arr, format='PNG')
-        st.session_state.pdf_image = img_byte_arr.getvalue()
-        st.session_state.user_uploaded_pdf = True
+        image_bytes = img_byte_arr.getvalue()
+        
+        from utils.gcs_storage import upload_pdf_image
+        filename = getattr(uploaded_file, 'name', 'uploaded_image.jpg')
+        filename_base = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        image_url = upload_pdf_image(image_bytes, filename_base, "init")
+        if image_url:
+            st.session_state.image_url = image_url
+            st.session_state.filename = filename
         
         # Extract text using OCR (same as PDF)
         extracted_text = ""
@@ -1361,26 +1374,46 @@ def process_pdf(uploaded_file):
     """Process uploaded PDF file and extract bearings."""
     try:
         # Clear previous document data from session state
-        for key in ['pdf_image', 'extracted_text', 'gpt_response', 'parsed_bearings', 'supplemental_info']:
+        for key in ['extracted_text', 'gpt_response', 'parsed_bearings', 'supplemental_info']:
             if key in st.session_state:
                 del st.session_state[key]
         
-        # Save uploaded file temporarily
+        # Upload original PDF to GCS
+        from utils.gcs_storage import upload_pdf_file, upload_pdf_image
+        filename = getattr(uploaded_file, 'name', 'uploaded.pdf')
+        pdf_bytes = uploaded_file.getvalue()
+        
+        pdf_url = upload_pdf_file(pdf_bytes, filename)
+        if not pdf_url:
+            st.error("Failed to upload PDF to storage")
+            return []
+        
+        # Save uploaded file temporarily for processing
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
+            tmp_file.write(pdf_bytes)
             pdf_path = tmp_file.name
 
         # Convert PDF to images
         images = convert_from_path(pdf_path)
 
-        # Store the first page image in session state
+        # Upload first page image to GCS
         if images:
-            # Convert PIL image to bytes for display
+            # Convert PIL image to bytes
             img_byte_arr = BytesIO()
             images[0].save(img_byte_arr, format='PNG')
-            img_byte_arr = img_byte_arr.getvalue()
-            st.session_state.pdf_image = img_byte_arr
-            st.session_state.user_uploaded_pdf = True
+            image_bytes = img_byte_arr.getvalue()
+            
+            # Upload to GCS with init- prefix
+            filename_base = filename.rsplit('.', 1)[0] if '.' in filename else filename
+            image_url = upload_pdf_image(image_bytes, filename_base, "init")
+            if not image_url:
+                st.error("Failed to upload image to storage")
+                return []
+            
+            # Store URLs for later use
+            st.session_state.pdf_url = pdf_url
+            st.session_state.image_url = image_url
+            st.session_state.filename = filename
 
         # Extract text from each page
         extracted_text = ""
@@ -1437,11 +1470,16 @@ def process_pdf(uploaded_file):
                 if supplemental_info:
                     st.session_state.supplemental_info = supplemental_info
                     # Highlight supplemental info on PDF preview
-                    if st.session_state.pdf_image:
-                        st.session_state.pdf_image = highlight_supplemental_info_on_image(
-                            st.session_state.pdf_image,
-                            supplemental_info
-                        )
+                    if st.session_state.get('image_url'):
+                        from utils.gcs_storage import download_image_from_gcs, upload_pdf_image
+                        image_bytes = download_image_from_gcs(st.session_state.image_url)
+                        if image_bytes:
+                            highlighted_bytes = highlight_supplemental_info_on_image(image_bytes, supplemental_info)
+                            # Upload highlighted version
+                            filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                            highlighted_url = upload_pdf_image(highlighted_bytes, filename_base, "highlighted")
+                            if highlighted_url:
+                                st.session_state.highlighted_url = highlighted_url
                     st.success("Successfully extracted property information")
             except Exception as e:
                 st.error(f"Error extracting property information: {str(e)}")
@@ -1474,10 +1512,14 @@ def process_pdf(uploaded_file):
                             from streamlit_js import st_js
                             import base64
                             
-                            pdf_image = st.session_state.pdf_image
-                            if pdf_image:
-                                # Convert to base64
-                                pdf_b64 = base64.b64encode(pdf_image).decode('utf-8')
+                            # Get highlighted image from GCS
+                            highlighted_url = st.session_state.get('highlighted_url') or st.session_state.get('image_url')
+                            if highlighted_url:
+                                from utils.gcs_storage import download_image_from_gcs
+                                pdf_image = download_image_from_gcs(highlighted_url)
+                                if pdf_image:
+                                    # Convert to base64
+                                    pdf_b64 = base64.b64encode(pdf_image).decode('utf-8')
                                 api_key = 'my-custom-key'
                                 
                                 # JavaScript code to send to print server
@@ -2114,10 +2156,18 @@ def main():
                 if filename.endswith(('.jpg', '.jpeg')):
                     # Image preview
                     image = PILImage.open(uploaded_file)
+                    # Upload image to GCS
                     img_byte_arr = BytesIO()
                     image.save(img_byte_arr, format='PNG')
-                    st.session_state.pdf_image = img_byte_arr.getvalue()
-                    st.session_state.user_uploaded_pdf = True
+                    image_bytes = img_byte_arr.getvalue()
+                    
+                    from utils.gcs_storage import upload_pdf_image
+                    filename = getattr(uploaded_file, 'name', 'uploaded.pdf')
+                    filename_base = filename.rsplit('.', 1)[0] if '.' in filename else filename
+                    image_url = upload_pdf_image(image_bytes, filename_base, "init")
+                    if image_url:
+                        st.session_state.image_url = image_url
+                        st.session_state.filename = filename
                     uploaded_file.seek(0)  # Reset for later processing
                 else:
                     # PDF preview - first page only
@@ -2126,10 +2176,18 @@ def main():
                         pdf_path = tmp_file.name
                     images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=150)
                     if images:
+                        # Upload image to GCS
                         img_byte_arr = BytesIO()
                         images[0].save(img_byte_arr, format='PNG')
-                        st.session_state.pdf_image = img_byte_arr.getvalue()
-                        st.session_state.user_uploaded_pdf = True
+                        image_bytes = img_byte_arr.getvalue()
+                        
+                        from utils.gcs_storage import upload_pdf_image
+                        filename = getattr(uploaded_file, 'name', 'uploaded.pdf')
+                        filename_base = filename.rsplit('.', 1)[0] if '.' in filename else filename
+                        image_url = upload_pdf_image(image_bytes, filename_base, "init")
+                        if image_url:
+                            st.session_state.image_url = image_url
+                            st.session_state.filename = filename
                     os.unlink(pdf_path)
                     uploaded_file.seek(0)  # Reset for later processing
             except Exception as e:
@@ -2150,11 +2208,19 @@ def main():
                 if bearings:
                     st.session_state.parsed_bearings = bearings
                     # Highlight bearings on PDF preview
-                    if st.session_state.pdf_image:
-                        st.session_state.pdf_image = highlight_supplemental_info_on_image(
-                            st.session_state.pdf_image,
-                            st.session_state.get('supplemental_info')
-                        )
+                    if st.session_state.get('image_url'):
+                        from utils.gcs_storage import download_image_from_gcs, upload_pdf_image
+                        image_bytes = download_image_from_gcs(st.session_state.image_url)
+                        if image_bytes:
+                            highlighted_bytes = highlight_supplemental_info_on_image(
+                                image_bytes,
+                                st.session_state.get('supplemental_info')
+                            )
+                            # Upload highlighted version
+                            filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                            highlighted_url = upload_pdf_image(highlighted_bytes, filename_base, "highlighted")
+                            if highlighted_url:
+                                st.session_state.highlighted_url = highlighted_url
                     st.session_state.line_count = len(bearings)
                     for i, bearing in enumerate(bearings):
                         st.session_state[f"cardinal_ns_{i}"] = bearing.get('cardinal_ns', "North")
@@ -2542,12 +2608,12 @@ def main():
         # Try to get image URL from GCS first, fallback to session state
         from utils.gcs_storage import get_latest_pdf_preview_url
         pdf_image_url = get_latest_pdf_preview_url()
-        pdf_image = pdf_image_url if pdf_image_url else st.session_state.pdf_image
+        pdf_image = pdf_image_url if pdf_image_url else st.session_state.get('highlighted_url') or st.session_state.get('image_url')
         
         if pdf_image:
-            # Check if this is the default example or user-uploaded
-            caption = 'Example: Gwinnett County Deed' if not hasattr(st.session_state, 'user_uploaded_pdf') else 'PDF Preview - please verify orientation'
-            st.image(pdf_image, caption=caption, use_container_width=True)
+            # Show filename as caption
+            filename = st.session_state.get('filename', 'Unknown')
+            st.image(pdf_image, caption=filename, use_container_width=True)
             
             # Add print button for highlighted PDF
             if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
@@ -2934,7 +3000,8 @@ def main():
                 st.session_state.lines = pd.DataFrame(columns=['start_x', 'start_y', 'end_x', 'end_y', 'bearing', 'bearing_desc', 'distance', 'monument'])
                 st.session_state.parsed_bearings = None
                 st.session_state.extracted_text = None
-                st.session_state.pdf_image = None
+                st.session_state.image_url = None
+                st.session_state.highlighted_url = None
                 st.session_state.supplemental_info = None
                 st.session_state.manual_bearing = None
                 st.session_state.line_count = 4  # Reset line count
@@ -3006,12 +3073,13 @@ def main():
     # Try to get image URL from GCS first, fallback to session state
     from utils.gcs_storage import get_latest_pdf_preview_url
     pdf_image_url = get_latest_pdf_preview_url()
-    pdf_image = pdf_image_url if pdf_image_url else st.session_state.pdf_image
+    pdf_image = pdf_image_url if pdf_image_url else st.session_state.get('highlighted_url') or st.session_state.get('image_url')
     
     if pdf_image:
         st.subheader("PDF Document")
         st.write("Please review your document shown below to verify the system correctly recognized the meets and bounds")
-        st.image(pdf_image, caption="PDF First Page", use_container_width=True)
+        filename = st.session_state.get('filename', 'Unknown')
+        st.image(pdf_image, caption=filename, use_container_width=True)
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
