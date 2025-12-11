@@ -3097,10 +3097,8 @@ def main():
             st.metric("County", st.session_state.supplemental_info.get('county', 'N/A'))
 
     # Display PDF image if available
-    # Try to get image URL from GCS first, fallback to session state
-    from utils.gcs_storage import get_latest_pdf_preview_url
-    pdf_image_url = get_latest_pdf_preview_url()
-    pdf_image = pdf_image_url if pdf_image_url else st.session_state.get('highlighted_url') or st.session_state.get('image_url')
+    # Get highlighted image from session state
+    pdf_image = st.session_state.get('highlighted_url')
     
     if pdf_image:
         st.subheader("PDF Document")
