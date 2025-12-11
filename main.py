@@ -1553,57 +1553,38 @@ def process_pdf(uploaded_file):
                                 
                                 result = st_js(js_code, key="auto_print_pdf_js")
                                 
-                                if result:
-                                    if result == 'success':
-                                        st.success("🖨️ Auto-print: Document sent to printer!")
+                                # Auto-export and print PDF report after highlighted PDF
+                                try:
+                                    pdf_report_data = export_pdf()
+                                    if pdf_report_data:
+                                        # Auto-print the PDF report
+                                        pdf_report_b64 = base64.b64encode(pdf_report_data).decode('utf-8')
+                                        pdf_report_js_code = f"""
+                                        (async () => {{
+                                            try {{
+                                                const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
+                                                    method: 'POST',
+                                                    headers: {{
+                                                        'Content-Type': 'application/json',
+                                                        'X-API-Key': '{api_key}'
+                                                    }},
+                                                    body: JSON.stringify({{
+                                                        document: '{pdf_report_b64}',
+                                                        format: 'pdf',
+                                                        filename: 'legal_description_report.pdf'
+                                                    }})
+                                                }});
+                                                
+                                                return 'sent';
+                                            }} catch (error) {{
+                                                return 'error: ' + error.message;
+                                            }}
+                                        }})();
+                                        """
                                         
-                                        # Auto-export and print PDF report after highlighted PDF
-                                        try:
-                                            pdf_report_data = export_pdf()
-                                            if pdf_report_data:
-                                                st.success("✅ PDF report exported")
-                                                
-                                                # Auto-print the PDF report
-                                                pdf_report_b64 = base64.b64encode(pdf_report_data).decode('utf-8')
-                                                pdf_report_js_code = f"""
-                                                (async () => {{
-                                                    try {{
-                                                        const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
-                                                            method: 'POST',
-                                                            headers: {{
-                                                                'Content-Type': 'application/json',
-                                                                'X-API-Key': '{api_key}'
-                                                            }},
-                                                            body: JSON.stringify({{
-                                                                document: '{pdf_report_b64}',
-                                                                format: 'pdf',
-                                                                filename: 'legal_description_report.pdf'
-                                                            }})
-                                                        }});
-                                                        
-                                                        if (printResponse.ok) {{
-                                                            return 'success';
-                                                        }} else {{
-                                                            const error = await printResponse.json();
-                                                            return 'error: ' + error.error;
-                                                        }}
-                                                    }} catch (error) {{
-                                                        return 'error: ' + error.message;
-                                                    }}
-                                                }})();
-                                                """
-                                                
-                                                pdf_report_result = st_js(pdf_report_js_code, key="auto_print_pdf_report_js")
-                                                
-                                                if pdf_report_result:
-                                                    if pdf_report_result == 'success':
-                                                        st.success("🖨️ Auto-print: PDF report sent to printer!")
-                                                    elif pdf_report_result.startswith('error:'):
-                                                        st.error(f"🖨️ PDF report print failed: {pdf_report_result[7:]}")
-                                        except Exception as pdf_error:
-                                            st.error(f"PDF report export error: {str(pdf_error)}")
-                                    elif result.startswith('error:'):
-                                        st.error(f"🖨️ Auto-print failed: {result[7:]}")
+                                        st_js(pdf_report_js_code, key="auto_print_pdf_report_js")
+                                except Exception as pdf_error:
+                                    pass
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
                     
