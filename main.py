@@ -1553,38 +1553,7 @@ def process_pdf(uploaded_file):
                                 
                                 result = st_js(js_code, key="auto_print_pdf_js")
                                 
-                                # Auto-export and print PDF report after highlighted PDF
-                                try:
-                                    pdf_report_data = export_pdf()
-                                    if pdf_report_data:
-                                        # Auto-print the PDF report
-                                        pdf_report_b64 = base64.b64encode(pdf_report_data).decode('utf-8')
-                                        pdf_report_js_code = f"""
-                                        (async () => {{
-                                            try {{
-                                                const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
-                                                    method: 'POST',
-                                                    headers: {{
-                                                        'Content-Type': 'application/json',
-                                                        'X-API-Key': '{api_key}'
-                                                    }},
-                                                    body: JSON.stringify({{
-                                                        document: '{pdf_report_b64}',
-                                                        format: 'pdf',
-                                                        filename: 'legal_description_report.pdf'
-                                                    }})
-                                                }});
-                                                
-                                                return 'sent';
-                                            }} catch (error) {{
-                                                return 'error: ' + error.message;
-                                            }}
-                                        }})();
-                                        """
-                                        
-                                        st_js(pdf_report_js_code, key="auto_print_pdf_report_js")
-                                except Exception as pdf_error:
-                                    pass
+
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
                     
@@ -2850,6 +2819,13 @@ def main():
             if st.button("📊 Export PDF", use_container_width=True):
                 pdf_data = export_pdf()
                 if pdf_data:
+                    # Upload to GCS
+                    from utils.gcs_storage import upload_pdf_file
+                    filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                    report_url = upload_pdf_file(pdf_data, f"report-{filename_base}.pdf")
+                    if report_url:
+                        st.session_state.report_url = report_url
+                    
                     st.download_button(
                         label="Download PDF",
                         data=pdf_data,
@@ -2918,6 +2894,13 @@ def main():
             if st.button("Export PDF", use_container_width=True):
                 pdf_data = export_pdf()
                 if pdf_data:
+                    # Upload to GCS
+                    from utils.gcs_storage import upload_pdf_file
+                    filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                    report_url = upload_pdf_file(pdf_data, f"report-{filename_base}.pdf")
+                    if report_url:
+                        st.session_state.report_url = report_url
+                    
                     st.download_button(
                         label="Download PDF",
                         data=pdf_data,
