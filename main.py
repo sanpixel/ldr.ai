@@ -1526,7 +1526,7 @@ def process_pdf(uploaded_file):
                                 js_code = f"""
                                 (async () => {{
                                     try {{
-                                        const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
+                                        const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
                                             method: 'POST',
                                             headers: {{
                                                 'Content-Type': 'application/json',
@@ -1562,7 +1562,7 @@ def process_pdf(uploaded_file):
                                         pdf_report_js_code = f"""
                                         (async () => {{
                                             try {{
-                                                const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
+                                                const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
                                                     method: 'POST',
                                                     headers: {{
                                                         'Content-Type': 'application/json',
@@ -3110,7 +3110,7 @@ def main():
                 (async () => {{
                     try {{
                         // Send to print server
-                        const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
+                        const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
                             method: 'POST',
                             headers: {{
                                 'Content-Type': 'application/json',
