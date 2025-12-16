@@ -2642,68 +2642,7 @@ def main():
             filename = st.session_state.get('filename', 'Unknown')
             st.image(pdf_image, caption=filename, use_container_width=True)
             
-            # Add print button for highlighted PDF
-            if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
-                try:
-                    from streamlit_js import st_js
-                    import base64
-                    import requests
-                    
-                    # Fetch image server-side to avoid CORS issues
-                    if isinstance(pdf_image, str):
-                        # Fetch from URL
-                        img_response = requests.get(pdf_image)
-                        pdf_bytes = img_response.content
-                    else:
-                        # Already bytes
-                        pdf_bytes = pdf_image
-                    
-                    # Convert to base64
-                    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
-                    
-                    # Get API key from environment
-                    api_key = 'my-custom-key'
-                    
-                    # JavaScript code to send to print server
-                    js_code = f"""
-                    (async () => {{
-                        try {{
-                            // Send to print server
-                            const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
-                                method: 'POST',
-                                headers: {{
-                                    'Content-Type': 'application/json',
-                                    'X-API-Key': '{api_key}'
-                                }},
-                                body: JSON.stringify({{
-                                    document: '{pdf_b64}',
-                                    format: 'pdf',
-                                    filename: 'highlighted_legal_description.pdf'
-                                }})
-                            }});
-                            
-                            if (printResponse.ok) {{
-                                return 'success';
-                            }} else {{
-                                const error = await printResponse.json();
-                                return 'error: ' + error.error;
-                            }}
-                        }} catch (error) {{
-                            return 'error: ' + error.message;
-                        }}
-                    }})();
-                    """
-                    
-                    result = st_js(js_code, key="print_pdf_js")
-                    
-                    if result:
-                        if result == 'success':
-                            st.success("✅ Document sent to printer!")
-                        elif result.startswith('error:'):
-                            st.error(f"❌ Print failed: {result[7:]}")
-                        
-                except Exception as e:
-                    st.error(f"❌ Print error: {str(e)}")
+
 
     # Display processing messages if available (from PDF processing)
     if hasattr(st.session_state, 'processing_messages') and st.session_state.processing_messages:
@@ -3143,6 +3082,69 @@ def main():
         if st.session_state.get('supplemental_response'):
             with st.expander("Debug: Full Supplemental Info Response"):
                 st.text(st.session_state.supplemental_response)
+        
+        # Add print button for highlighted PDF
+        if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
+            try:
+                from streamlit_js import st_js
+                import base64
+                import requests
+                
+                # Fetch image server-side to avoid CORS issues
+                if isinstance(pdf_image, str):
+                    # Fetch from URL
+                    img_response = requests.get(pdf_image)
+                    pdf_bytes = img_response.content
+                else:
+                    # Already bytes
+                    pdf_bytes = pdf_image
+                
+                # Convert to base64
+                pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                
+                # Get API key from environment
+                api_key = 'my-custom-key'
+                
+                # JavaScript code to send to print server
+                js_code = f"""
+                (async () => {{
+                    try {{
+                        // Send to print server
+                        const printResponse = await fetch('https://af66a6565012.ngrok-free.app/print', {{
+                            method: 'POST',
+                            headers: {{
+                                'Content-Type': 'application/json',
+                                'X-API-Key': '{api_key}'
+                            }},
+                            body: JSON.stringify({{
+                                document: '{pdf_b64}',
+                                format: 'pdf',
+                                filename: 'highlighted_legal_description.pdf'
+                            }})
+                        }});
+                        
+                        if (printResponse.ok) {{
+                            return 'success';
+                        }} else {{
+                            const error = await printResponse.json();
+                            return 'error: ' + error.error;
+                        }}
+                    }} catch (error) {{
+                        return 'error: ' + error.message;
+                    }}
+                }})();
+                """
+                
+                result = st_js(js_code, key="print_pdf_js")
+                
+                if result:
+                    if result == 'success':
+                        st.success("✅ Document sent to printer!")
+                    elif result.startswith('error:'):
+                        st.error(f"❌ Print failed: {result[7:]}")
+                    
+            except Exception as e:
+                st.error(f"❌ Print error: {str(e)}")
 
 if __name__ == "__main__":
     main()
