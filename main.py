@@ -1540,18 +1540,6 @@ def process_pdf(uploaded_file):
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
                     
-                    # Auto-generate PDF report
-                    try:
-                        pdf_data = export_pdf_report()
-                        if pdf_data:
-                            from utils.gcs_storage import upload_pdf_file
-                            filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
-                            report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
-                            if report_url:
-                                st.session_state.report_url = report_url
-                    except Exception as e:
-                        pass
-                    
                     return bearings
                 else:
                     st.warning("No bearings found")
@@ -2085,7 +2073,14 @@ def main():
         return
     
     # Main application (shown after intro)
-    st.title("Legal Description Reader v1.1.7")
+    # Read version from VERSION file
+    try:
+        with open('VERSION', 'r') as f:
+            version = f.read().strip()
+    except:
+        version = "1.0.0"
+    
+    st.title(f"Legal Description Reader v{version}")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -2234,6 +2229,46 @@ def main():
                             report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
                             if report_url:
                                 st.session_state.report_url = report_url
+                                st.info("📊 Auto-generated survey report")
+                                
+                                # Auto-print survey report if auto-print enabled
+                                if st.session_state.get('auto_print', False):
+                                    try:
+                                        from streamlit_js import st_js
+                                        import base64
+                                        import requests
+                                        
+                                        # Download PDF from GCS
+                                        response = requests.get(report_url)
+                                        if response.status_code == 200:
+                                            pdf_b64 = base64.b64encode(response.content).decode('utf-8')
+                                            api_key = 'my-custom-key'
+                                            
+                                            js_code = f"""
+                                            (async () => {{
+                                                try {{
+                                                    const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                                                        method: 'POST',
+                                                        headers: {{
+                                                            'Content-Type': 'application/json',
+                                                            'X-API-Key': '{api_key}'
+                                                        }},
+                                                        body: JSON.stringify({{
+                                                            document: '{pdf_b64}',
+                                                            format: 'pdf',
+                                                            filename: 'survey-report.pdf'
+                                                        }})
+                                                    }});
+                                                    return 'sent';
+                                                }} catch (error) {{
+                                                    return 'error: ' + error.message;
+                                                }}
+                                            }})();
+                                            """
+                                            
+                                            st_js(js_code, key="auto_print_survey_report_js")
+                                    except Exception as e:
+                                        pass
                     except Exception as e:
                         pass
                     
