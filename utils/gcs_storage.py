@@ -100,8 +100,8 @@ def upload_pdf_file(pdf_bytes: bytes, filename: str) -> Optional[str]:
         bucket_name = "ldr-ai"
         bucket = client.bucket(bucket_name)
         
-        # Use init- prefix with original filename
-        blob_name = f"init-{filename}"
+        # Use filename as-is
+        blob_name = filename
         
         # Upload PDF
         blob = bucket.blob(blob_name)

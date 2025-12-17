@@ -789,24 +789,7 @@ def initialize_session_state():
     if 'parsed_bearings' not in st.session_state:
         st.session_state.parsed_bearings = None
     if 'pdf_image' not in st.session_state:
-        # Load default example PDF image on first visit
-        try:
-            example_pdf_path = "GWINNETT Deed Book 59715 Page 467.pdf"
-            if os.path.exists(example_pdf_path):
-                from pdf2image import convert_from_path
-                from utils.gcs_storage import upload_pdf_image
-                images = convert_from_path(example_pdf_path, first_page=1, last_page=1, dpi=150)
-                if images:
-                    img_byte_arr = BytesIO()
-                    images[0].save(img_byte_arr, format='PNG')
-                    image_bytes = img_byte_arr.getvalue()
-                    # Upload example to GCS
-                    example_url = upload_pdf_image(image_bytes, "example-gwinnett", "init")
-                    if example_url:
-                        st.session_state.image_url = example_url
-                        st.session_state.filename = "GWINNETT Deed Book 59715 Page 467.pdf"
-        except Exception:
-            pass
+        st.session_state.pdf_image = None
     if 'supplemental_info' not in st.session_state:
         st.session_state.supplemental_info = None
     if 'manual_bearing' not in st.session_state:
@@ -2822,7 +2805,7 @@ def main():
                     # Upload to GCS
                     from utils.gcs_storage import upload_pdf_file
                     filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
-                    report_url = upload_pdf_file(pdf_data, f"report-{filename_base}.pdf")
+                    report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
                     if report_url:
                         st.session_state.report_url = report_url
                     
@@ -2897,7 +2880,7 @@ def main():
                     # Upload to GCS
                     from utils.gcs_storage import upload_pdf_file
                     filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
-                    report_url = upload_pdf_file(pdf_data, f"report-{filename_base}.pdf")
+                    report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
                     if report_url:
                         st.session_state.report_url = report_url
                     
