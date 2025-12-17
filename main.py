@@ -1540,6 +1540,18 @@ def process_pdf(uploaded_file):
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
                     
+                    # Auto-generate PDF report
+                    try:
+                        pdf_data = export_pdf_report()
+                        if pdf_data:
+                            from utils.gcs_storage import upload_pdf_file
+                            filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                            report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
+                            if report_url:
+                                st.session_state.report_url = report_url
+                    except Exception as e:
+                        pass
+                    
                     return bearings
                 else:
                     st.warning("No bearings found")
@@ -1619,7 +1631,7 @@ def export_cad():
         return None
 
 
-def export_pdf():
+def export_pdf_report():
     """Create a PDF file containing the line drawing and property information."""
     if st.session_state.lines.empty:
         st.error("No lines to export")
@@ -2800,7 +2812,7 @@ def main():
         
         with col4:
             if st.button("📊 Export PDF", use_container_width=True):
-                pdf_data = export_pdf()
+                pdf_data = export_pdf_report()
                 if pdf_data:
                     # Upload to GCS
                     from utils.gcs_storage import upload_pdf_file
@@ -2875,7 +2887,7 @@ def main():
 
         with col4:
             if st.button("Export PDF", use_container_width=True):
-                pdf_data = export_pdf()
+                pdf_data = export_pdf_report()
                 if pdf_data:
                     # Upload to GCS
                     from utils.gcs_storage import upload_pdf_file
