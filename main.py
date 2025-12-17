@@ -2224,7 +2224,20 @@ def main():
                     
                     st.session_state.draw_lines_section_expanded = False
                     draw_lines_from_bearings()
-                    st.success(f"✅ Successfully extracted and populated {len(bearings)} bearings!")
+                    
+                    # Auto-generate PDF report
+                    try:
+                        pdf_data = export_pdf_report()
+                        if pdf_data:
+                            from utils.gcs_storage import upload_pdf_file
+                            filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                            report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
+                            if report_url:
+                                st.session_state.report_url = report_url
+                    except Exception as e:
+                        pass
+                    
+                    st.success(f"✅ Lines drawn from meets and bounds shown below")
         
         # Available PDF Files Selector (only for sanjay149@gmail.com)
         user_email = st.session_state.get('user', {}).get('email', '')
