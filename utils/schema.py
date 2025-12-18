@@ -266,31 +266,14 @@ def extract_bearings_with_normalized_schema(text: str, filename: str, user_email
     This function wraps the existing GPT extraction and normalizes the output
     """
     import streamlit as st
-    from main import extract_bearings_with_gpt
     
-    try:
-        # Use existing GPT extraction function
-        bearings, result_text = extract_bearings_with_gpt(
-            text, filename, user_email, file_size, page_count
-        )
-        
-        # Convert to normalized schema
-        schema_output = normalize_gpt_output(bearings)
-        
-        # Validate the schema
-        validation_errors = schema_output.validate_schema()
-        if validation_errors:
-            if st.session_state.get('debug_enabled', False):
-                st.warning(f"Schema validation errors: {validation_errors}")
-            # Return empty schema if validation fails
-            return create_empty_schema()
-        
-        return schema_output
-        
-    except Exception as e:
-        if st.session_state.get('debug_enabled', False):
-            st.error(f"Error in normalized extraction: {str(e)}")
-        return create_empty_schema()
+    # This function is now deprecated - main.py extract_bearings_with_gpt returns SchemaOutput directly
+    if st.session_state.get('debug_enabled', False):
+        st.warning("🔄 DEBUG: extract_bearings_with_normalized_schema is deprecated - use main.extract_bearings_with_gpt directly")
+    
+    # Import and call the main function
+    from main import extract_bearings_with_gpt
+    return extract_bearings_with_gpt(text, filename, user_email, file_size, page_count)
 
 
 def apply_schema_validation_defaults(line_data: Dict[str, Any]) -> Dict[str, Any]:

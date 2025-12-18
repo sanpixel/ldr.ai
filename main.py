@@ -188,8 +188,8 @@ def format_bearing_concise(bearing_desc):
         return bearing_desc  # Return original if parsing fails
     return bearing_desc
 
-def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_count=None, text_length=None, bearing_count=None):
-    """Use GPT to extract bearings from text with a robust, line-by-line parser."""
+def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_count=None):
+    """Main extraction function that returns normalized SchemaOutput."""
     import time
     processing_start_time = time.time()
     
@@ -581,11 +581,115 @@ Text to analyze:"""
             elif classification.lower() in ['explicit_bearings'] and len(parsed_bearings) == 0:
                 st.write("**DEBUG: Unexpected - Explicit classification but no bearings found. Check parsing logic.**")
 
-        return parsed_bearings, result_text
+        # Convert to normalized schema
+        from utils.schema import SchemaOutput, LineData, BucketClassification
+        
+        if st.session_state.get('debug_enabled', False):
+            st.write(f"🔍 DEBUG: Converting {len(parsed_bearings)} bearings to normalized schema")
+        
+        # Convert legacy bearings to LineData
+        lines = []
+        for i, bearing in enumerate(parsed_bearings):
+            line_data = LineData(
+                type="course",
+                idx=i + 1,
+                raw=bearing.get('original_text', ''),
+                cardinal_ns=bearing.get('cardinal_ns'),
+                degrees=bearing.get('degrees'),
+                minutes=bearing.get('minutes'),
+                seconds=bearing.get('seconds'),
+                cardinal_ew=bearing.get('cardinal_ew'),
+                distance=bearing.get('distance'),
+                monument=bearing.get('monument'),
+                reference=None
+            )
+            lines.append(line_data)
+        
+        # Create schema output
+        schema_output = SchemaOutput(
+            bucket=BucketClassification.NO_BEARINGS.value,
+            lines=lines
+        )
+        
+        # Derive bucket from line content
+        schema_output.update_bucket_classification()
+        
+        if st.session_state.get('debug_enabled', False):
+            st.write(f"🔍 DEBUG: Final schema - Bucket: {schema_output.bucket}, Lines: {len(schema_output.lines)}")
+            st.json(schema_output.to_dict())
+        
+        return schema_output
 
     except Exception as e:
+        from utils.schema import create_empty_schema
         st.error(f"Error using GPT to parse text: {str(e)}")
-        return [], None
+        return create_empty_schema()
+
+
+def convert_schema_to_legacy_bearings(schema_output):
+    """Convert SchemaOutput to legacy bearing format for existing UI code."""
+    if st.session_state.get('debug_enabled', False):
+        st.write(f"🔍 DEBUG: Converting schema to legacy format - {len(schema_output.lines)} lines")
+    
+    legacy_bearings = []
+    for line in schema_output.lines:
+        if line.type == "course":
+            legacy_bearing = {
+                'cardinal_ns': line.cardinal_ns,
+                'cardinal_ew': line.cardinal_ew,
+                'degrees': line.degrees,
+                'minutes': line.minutes,
+                'seconds': line.seconds,
+                'distance': line.distance,
+                'monument': line.monument,
+                'original_text': line.raw
+            }
+            legacy_bearings.append(legacy_bearing)
+    
+    if st.session_state.get('debug_enabled', False):
+        st.write(f"🔍 DEBUG: Converted to {len(legacy_bearings)} legacy bearings")
+    
+    return legacy_bearings
+
+
+def store_extraction_results(schema_output, bearings):
+    """Store both schema output and legacy bearings in session state."""
+    st.session_state.parsed_bearings = bearings
+    st.session_state.schema_output = schema_output
+    st.session_state.line_count = len(bearings)
+    
+    if st.session_state.get('debug_enabled', False):
+        st.write(f"🔍 DEBUG: Stored extraction results - Bucket: {schema_output.bucket}, Bearings: {len(bearings)}")
+
+
+def convert_legacy_to_schema(legacy_bearings):
+    """Convert legacy bearing format back to SchemaOutput."""
+    from utils.schema import SchemaOutput, LineData, BucketClassification
+    
+    lines = []
+    for i, bearing in enumerate(legacy_bearings):
+        line_data = LineData(
+            type="course",
+            idx=i + 1,
+            raw=bearing.get('original_text', ''),
+            cardinal_ns=bearing.get('cardinal_ns'),
+            degrees=bearing.get('degrees'),
+            minutes=bearing.get('minutes'),
+            seconds=bearing.get('seconds'),
+            cardinal_ew=bearing.get('cardinal_ew'),
+            distance=bearing.get('distance'),
+            monument=bearing.get('monument'),
+            reference=None
+        )
+        lines.append(line_data)
+    
+    schema_output = SchemaOutput(
+        bucket=BucketClassification.NO_BEARINGS.value,
+        lines=lines
+    )
+    schema_output.update_bucket_classification()
+    
+    return schema_output
 
 def extract_bearings_from_text(text):
     """
@@ -1330,7 +1434,9 @@ def process_image(uploaded_file):
                 uploaded_file.seek(0)
                 file_size = len(uploaded_file.read())
                 page_count = 1
-                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
+                schema_output = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
+                bearings = convert_schema_to_legacy_bearings(schema_output)
+                result_text = f"Schema output: {schema_output.bucket}"
                 # Count bearings in response text
                 total_in_response = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
                 st.info(f"Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
@@ -1339,19 +1445,22 @@ def process_image(uploaded_file):
                 
                 if bearings:
                     st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
-                    return bearings
+                    return bearings, schema_output
                 else:
                     st.warning("No bearings found")
-                    return []
+                    return [], schema_output
             except Exception as e:
+                from utils.schema import create_empty_schema
                 st.error(f"GPT analysis failed: {str(e)}")
-                return []
+                return [], create_empty_schema()
         else:
+            from utils.schema import create_empty_schema
             st.warning("No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions.")
-            return []
+            return [], create_empty_schema()
     except Exception as e:
+        from utils.schema import create_empty_schema
         st.error(f"Error processing image: {str(e)}")
-        return []
+        return [], create_empty_schema()
 
 def process_pdf(uploaded_file):
     """Process uploaded PDF file and extract bearings."""
@@ -1368,8 +1477,9 @@ def process_pdf(uploaded_file):
         
         pdf_url = upload_pdf_file(pdf_bytes, filename)
         if not pdf_url:
+            from utils.schema import create_empty_schema
             st.error("Failed to upload PDF to storage")
-            return []
+            return [], create_empty_schema()
         
         # Save uploaded file temporarily for processing
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -1390,8 +1500,9 @@ def process_pdf(uploaded_file):
             filename_base = filename.rsplit('.', 1)[0] if '.' in filename else filename
             image_url = upload_pdf_image(image_bytes, filename_base, "init")
             if not image_url:
+                from utils.schema import create_empty_schema
                 st.error("Failed to upload image to storage")
-                return []
+                return [], create_empty_schema()
             
             # Store URLs for later use
             st.session_state.pdf_url = pdf_url
@@ -1478,7 +1589,9 @@ def process_pdf(uploaded_file):
                     st.write(f"🔍 DEBUG: Extracted filename: '{filename}' from uploaded file")
                     st.write(f"🔍 DEBUG: File size: {file_size} bytes")
                     st.write(f"🔍 DEBUG: Page count: {page_count} pages")
-                bearings, result_text = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
+                schema_output = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
+                bearings = convert_schema_to_legacy_bearings(schema_output)
+                result_text = f"Schema output: {schema_output.bucket}"
                 # Count bearings in response text
                 total_in_response = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
                 st.info(f"Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
@@ -1489,19 +1602,22 @@ def process_pdf(uploaded_file):
                 if bearings:
                     st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
                     
-                    return bearings
+                    return bearings, schema_output
                 else:
                     st.warning("No bearings found")
-                    return []
+                    return [], schema_output
             except Exception as e:
+                from utils.schema import create_empty_schema
                 st.error(f"GPT analysis failed: {str(e)}")
-                return []
+                return [], create_empty_schema()
         else:
+            from utils.schema import create_empty_schema
             st.warning("No OpenAI API key found. Please configure your OpenAI API key to analyze legal descriptions.")
-            return []
+            return [], create_empty_schema()
     except Exception as e:
+        from utils.schema import create_empty_schema
         st.error(f"Error processing PDF: {str(e)}")
-        return []
+        return [], create_empty_schema()
 
 def export_cad():
     """Create a CAD file using FreeCAD."""
@@ -2137,15 +2253,15 @@ def main():
                 # Route to appropriate processor based on file type
                 filename = getattr(uploaded_file, 'name', '').lower()
                 if filename.endswith(('.jpg', '.jpeg')):
-                    bearings = process_image(uploaded_file)
+                    bearings, schema_output = process_image(uploaded_file)
                 else:
-                    bearings = process_pdf(uploaded_file)
+                    bearings, schema_output = process_pdf(uploaded_file)
                 
                 # Clear uploaded file reference after processing to prevent axios errors
                 uploaded_file = None
                 
                 if bearings:
-                    st.session_state.parsed_bearings = bearings
+                    store_extraction_results(schema_output, bearings)
                     # Highlight bearings on PDF preview
                     if st.session_state.get('image_url'):
                         from utils.gcs_storage import download_image_from_gcs, upload_pdf_image
@@ -2220,11 +2336,10 @@ def main():
                                 from io import BytesIO
                                 pdf_buffer = BytesIO(file_content)
                                 pdf_buffer.name = first_pdf
-                                bearings = process_pdf(pdf_buffer)
+                                bearings, schema_output = process_pdf(pdf_buffer)
                                 
                                 if bearings:
-                                    st.session_state.parsed_bearings = bearings
-                                    st.session_state.line_count = len(bearings)
+                                    store_extraction_results(schema_output, bearings)
                                     
                                     # Populate session state with extracted bearings
                                     for i, bearing in enumerate(bearings):
@@ -2275,11 +2390,10 @@ def main():
                                     pdf_buffer = BytesIO(file_content)
                                     # Set the name attribute so we can get the actual filename
                                     pdf_buffer.name = selected_pdf
-                                    bearings = process_pdf(pdf_buffer)
+                                    bearings, schema_output = process_pdf(pdf_buffer)
                                     
                                     if bearings:
-                                        st.session_state.parsed_bearings = bearings
-                                        st.session_state.line_count = len(bearings)
+                                        store_extraction_results(schema_output, bearings)
                                         
                                         # Populate session state with extracted bearings
                                         for i, bearing in enumerate(bearings):
@@ -2349,11 +2463,10 @@ def main():
                                         
                                         if pdf_buffer:
                                             # Process the PDF
-                                            bearings = process_pdf(pdf_buffer)
+                                            bearings, schema_output = process_pdf(pdf_buffer)
                                             
                                             if bearings:
-                                                st.session_state.parsed_bearings = bearings
-                                                st.session_state.line_count = len(bearings)
+                                                store_extraction_results(schema_output, bearings)
                                                 
                                                 # Populate session state with extracted bearings
                                                 for i, bearing in enumerate(bearings):
@@ -2403,11 +2516,10 @@ def main():
                     if st.button("🔄 Process Photo", use_container_width=True, type="primary", key="process_camera_logged_in"):
                         with st.spinner("Processing photo..."):
                             # Process the camera image
-                            bearings = process_image(camera_photo)
+                            bearings, schema_output = process_image(camera_photo)
                             
                             if bearings:
-                                st.session_state.parsed_bearings = bearings
-                                st.session_state.line_count = len(bearings)
+                                store_extraction_results(schema_output, bearings)
                                 
                                 # Populate session state with extracted bearings
                                 for i, bearing in enumerate(bearings):
@@ -2478,11 +2590,10 @@ def main():
                                             pdf_buffer.name = selected_drive_file
                                             
                                             # Process the PDF
-                                            bearings = process_pdf(pdf_buffer)
+                                            bearings, schema_output = process_pdf(pdf_buffer)
                                             
                                             if bearings:
-                                                st.session_state.parsed_bearings = bearings
-                                                st.session_state.line_count = len(bearings)
+                                                store_extraction_results(schema_output, bearings)
                                                 
                                                 # Populate session state with extracted bearings
                                                 for i, bearing in enumerate(bearings):
@@ -2532,11 +2643,10 @@ def main():
                     if st.button("🔄 Process Photo", use_container_width=True, type="primary"):
                         with st.spinner("Processing photo..."):
                             # Process the camera image
-                            bearings = process_image(camera_photo)
+                            bearings, schema_output = process_image(camera_photo)
                             
                             if bearings:
-                                st.session_state.parsed_bearings = bearings
-                                st.session_state.line_count = len(bearings)
+                                store_extraction_results(schema_output, bearings)
                                 
                                 # Populate session state with extracted bearings
                                 for i, bearing in enumerate(bearings):
@@ -2737,6 +2847,9 @@ def main():
                 updated_bearings.append(bearing)
             
             st.session_state.parsed_bearings = updated_bearings
+            # Convert back to schema and store
+            schema_output = convert_legacy_to_schema(updated_bearings)
+            st.session_state.schema_output = schema_output
             st.success("✅ Table updated! Changes will be used when drawing lines.")
         
         # Action buttons for drawing and exporting
@@ -2825,6 +2938,9 @@ def main():
 
                 if manual_bearings:
                     st.session_state.parsed_bearings = manual_bearings
+                    # Convert to schema and store
+                    schema_output = convert_legacy_to_schema(manual_bearings)
+                    st.session_state.schema_output = schema_output
                     draw_lines_from_bearings()
 
         with col2:
@@ -2900,6 +3016,9 @@ def main():
 
                 if manual_bearings:
                     st.session_state.parsed_bearings = manual_bearings
+                    # Convert to schema and store
+                    schema_output = convert_legacy_to_schema(manual_bearings)
+                    st.session_state.schema_output = schema_output
                     draw_lines_from_bearings()
 
         with col6:
@@ -3034,8 +3153,12 @@ def main():
                 st.write(f"Failed to load evidence from database: {str(e)}")
         
         if st.session_state.get('parsed_bearings'):
-            with st.expander("Debug: Full Parsed Bearings Data"):
+            with st.expander("Debug: Full Parsed Bearings Data (Legacy Format)"):
                 st.json(st.session_state.parsed_bearings)
+        
+        if st.session_state.get('schema_output'):
+            with st.expander("Debug: Normalized Schema Output"):
+                st.json(st.session_state.schema_output.to_dict())
         
         if st.session_state.get('supplemental_response'):
             with st.expander("Debug: Full Supplemental Info Response"):

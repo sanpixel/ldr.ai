@@ -3,6 +3,9 @@
 - [x] 1. Normalize Output Schema (Foundation)
 
 
+
+
+
   - Create strict JSON schema classes for bucket and lines array structure
   - Implement schema validation and null value handling for missing fields
   - Modify existing GPT extraction to output normalized schema
@@ -292,7 +295,10 @@
   - Maintain backward compatibility with existing data
   - _Requirements: 12.1, 12.5_
 
-- [x] 14. Optimize Runtime Processing Flow
+- [ ] 14. Optimize Runtime Processing Flow
+
+
+
 
 
   - Implement classifier-first processing order
