@@ -2029,7 +2029,7 @@ def main():
     except:
         version = "1.0.0"
     
-    # Generate color based on version
+    # Generate color based on version - changes when version changes
     import hashlib
     color_hash = hashlib.md5(version.encode()).hexdigest()[:6]
     
@@ -2183,6 +2183,10 @@ def main():
                             if report_url:
                                 st.session_state.report_url = report_url
                                 st.info("📊 Auto-generated survey report")
+                                
+                                # Auto-print combined PDF if enabled
+                                if st.session_state.get('auto_print', False):
+                                    st.session_state.trigger_combined_print = True
                     except Exception as e:
                         pass
                     
@@ -3104,7 +3108,7 @@ def main():
                     st.error(f"❌ Print error: {str(e)}")
         
         with col2:
-            if st.button("🖨️ Print Combined (Highlighted + Report)", key="print_combined_pdf"):
+            if st.button("🖨️ Print Combined (Highlighted + Report)", key="print_combined_pdf") or st.session_state.get('trigger_combined_print', False):
                 try:
                     from streamlit_js import st_js
                     import base64
@@ -3220,9 +3224,15 @@ def main():
                             st.success("✅ Combined document sent to printer!")
                         elif result.startswith('error:'):
                             st.error(f"❌ Print failed: {result[7:]}")
+                    
+                    # Clear trigger
+                    if 'trigger_combined_print' in st.session_state:
+                        del st.session_state.trigger_combined_print
                         
                 except Exception as e:
                     st.error(f"❌ Combined print error: {str(e)}")
+                    if 'trigger_combined_print' in st.session_state:
+                        del st.session_state.trigger_combined_print
 
 if __name__ == "__main__":
     main()
