@@ -20,3 +20,4 @@ flask-cors
 hypothesis
 pytest
 PyPDF2
+Pillow

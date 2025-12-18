@@ -3105,8 +3105,6 @@ def main():
                     from streamlit_js import st_js
                     import base64
                     import requests
-                    from reportlab.pdfgen import canvas
-                    from reportlab.lib.pagesizes import letter
                     from PyPDF2 import PdfReader, PdfWriter
                     import io
                     
@@ -3133,9 +3131,27 @@ def main():
                     # Combine PDFs using PyPDF2
                     writer = PdfWriter()
                     
-                    # Add highlighted PDF pages
-                    highlighted_reader = PdfReader(io.BytesIO(highlighted_bytes))
-                    for page in highlighted_reader.pages:
+                    # Convert highlighted PNG to PDF first
+                    
+                    # Create PDF from PNG image
+                    png_pdf_buffer = io.BytesIO()
+                    img = PILImage.open(io.BytesIO(highlighted_bytes))
+                    img_width, img_height = img.size
+                    
+                    # Scale to fit letter size
+                    page_width, page_height = letter
+                    scale = min(page_width / img_width, page_height / img_height)
+                    scaled_width = img_width * scale
+                    scaled_height = img_height * scale
+                    
+                    from reportlab.pdfgen import canvas
+                    c = canvas.Canvas(png_pdf_buffer, pagesize=letter)
+                    c.drawInlineImage(img, 0, page_height - scaled_height, scaled_width, scaled_height)
+                    c.save()
+                    
+                    # Add converted PNG as PDF pages
+                    png_pdf_reader = PdfReader(io.BytesIO(png_pdf_buffer.getvalue()))
+                    for page in png_pdf_reader.pages:
                         writer.add_page(page)
                     
                     # Add report PDF pages
