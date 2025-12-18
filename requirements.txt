@@ -19,3 +19,4 @@ flask
 flask-cors
 hypothesis
 pytest
+PyPDF2

@@ -1489,94 +1489,6 @@ def process_pdf(uploaded_file):
                 if bearings:
                     st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
                     
-                    # Auto-print if enabled
-                    if st.session_state.get('auto_print', False):
-                        try:
-                            from streamlit_js import st_js
-                            import base64
-                            
-                            # Get highlighted image from GCS
-                            highlighted_url = st.session_state.get('highlighted_url') or st.session_state.get('image_url')
-                            if highlighted_url:
-                                from utils.gcs_storage import download_image_from_gcs
-                                pdf_image = download_image_from_gcs(highlighted_url)
-                                if pdf_image:
-                                    # Convert to base64
-                                    pdf_b64 = base64.b64encode(pdf_image).decode('utf-8')
-                                api_key = 'my-custom-key'
-                                
-                                # JavaScript code to send to print server
-                                js_code = f"""
-                                (async () => {{
-                                    try {{
-                                        const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
-                                            method: 'POST',
-                                            headers: {{
-                                                'Content-Type': 'application/json',
-                                                'X-API-Key': '{api_key}'
-                                            }},
-                                            body: JSON.stringify({{
-                                                document: '{pdf_b64}',
-                                                format: 'pdf',
-                                                filename: 'highlighted_legal_description.pdf'
-                                            }})
-                                        }});
-                                        
-                                        if (printResponse.ok) {{
-                                            return 'success';
-                                        }} else {{
-                                            const error = await printResponse.json();
-                                            return 'error: ' + error.error;
-                                        }}
-                                    }} catch (error) {{
-                                        return 'error: ' + error.message;
-                                    }}
-                                }})();
-                                """
-                                
-                                # Just print the fucking highlighted image
-                                result = st_js(js_code, key="auto_print_pdf_js")
-                                
-                                # Print the PDF report separately 
-                                report_url = st.session_state.get('report_url')
-                                if report_url:
-                                    try:
-                                        import time
-                                        time.sleep(5)  # Wait 5 seconds
-                                        
-                                        report_response = requests.get(report_url)
-                                        if report_response.status_code == 200:
-                                            report_b64 = base64.b64encode(report_response.content).decode('utf-8')
-                                            
-                                            report_js = f"""
-                                            (async () => {{
-                                                try {{
-                                                    const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
-                                                        method: 'POST',
-                                                        headers: {{
-                                                            'Content-Type': 'application/json',
-                                                            'X-API-Key': '{api_key}'
-                                                        }},
-                                                        body: JSON.stringify({{
-                                                            document: '{report_b64}',
-                                                            format: 'pdf',
-                                                            filename: 'survey-report.pdf'
-                                                        }})
-                                                    }});
-                                                    return 'sent';
-                                                }} catch (error) {{
-                                                    return 'error: ' + error.message;
-                                                }}
-                                            }})();
-                                            """
-                                            
-                                            st_js(report_js, key="auto_print_report_simple")
-                                    except Exception as e:
-                                        pass
-
-                        except Exception as e:
-                            st.error(f"🖨️ Auto-print error: {str(e)}")
-                    
                     return bearings
                 else:
                     st.warning("No bearings found")
@@ -2267,45 +2179,6 @@ def main():
                             if report_url:
                                 st.session_state.report_url = report_url
                                 st.info("📊 Auto-generated survey report")
-                                
-                                # Auto-print survey report if auto-print enabled
-                                if st.session_state.get('auto_print', False):
-                                    try:
-                                        from streamlit_js import st_js
-                                        import base64
-                                        import requests
-                                        
-                                        # Download PDF from GCS
-                                        response = requests.get(report_url)
-                                        if response.status_code == 200:
-                                            pdf_b64 = base64.b64encode(response.content).decode('utf-8')
-                                            api_key = 'my-custom-key'
-                                            
-                                            js_code = f"""
-                                            (async () => {{
-                                                try {{
-                                                    const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
-                                                        method: 'POST',
-                                                        headers: {{
-                                                            'Content-Type': 'application/json',
-                                                            'X-API-Key': '{api_key}'
-                                                        }},
-                                                        body: JSON.stringify({{
-                                                            document: '{pdf_b64}',
-                                                            format: 'pdf',
-                                                            filename: 'survey-report.pdf'
-                                                        }})
-                                                    }});
-                                                    return 'sent';
-                                                }} catch (error) {{
-                                                    return 'error: ' + error.message;
-                                                }}
-                                            }})();
-                                            """
-                                            
-                                            st_js(js_code, key="auto_print_survey_report_js")
-                                    except Exception as e:
-                                        pass
                     except Exception as e:
                         pass
                     
@@ -3160,68 +3033,176 @@ def main():
             with st.expander("Debug: Full Supplemental Info Response"):
                 st.text(st.session_state.supplemental_response)
         
-        # Add print button for highlighted PDF
-        if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
-            try:
-                from streamlit_js import st_js
-                import base64
-                import requests
-                
-                # Fetch image server-side to avoid CORS issues
-                if isinstance(pdf_image, str):
-                    # Fetch from URL
-                    img_response = requests.get(pdf_image)
-                    pdf_bytes = img_response.content
-                else:
-                    # Already bytes
-                    pdf_bytes = pdf_image
-                
-                # Convert to base64
-                pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
-                
-                # Get API key from environment
-                api_key = 'my-custom-key'
-                
-                # JavaScript code to send to print server
-                js_code = f"""
-                (async () => {{
-                    try {{
-                        // Send to print server
-                        const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
-                            method: 'POST',
-                            headers: {{
-                                'Content-Type': 'application/json',
-                                'X-API-Key': '{api_key}'
-                            }},
-                            body: JSON.stringify({{
-                                document: '{pdf_b64}',
-                                format: 'pdf',
-                                filename: 'highlighted_legal_description.pdf'
-                            }})
-                        }});
-                        
-                        if (printResponse.ok) {{
-                            return 'success';
-                        }} else {{
-                            const error = await printResponse.json();
-                            return 'error: ' + error.error;
-                        }}
-                    }} catch (error) {{
-                        return 'error: ' + error.message;
-                    }}
-                }})();
-                """
-                
-                result = st_js(js_code, key="print_pdf_js")
-                
-                if result:
-                    if result == 'success':
-                        st.success("✅ Document sent to printer!")
-                    elif result.startswith('error:'):
-                        st.error(f"❌ Print failed: {result[7:]}")
+        # Add print buttons
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
+                try:
+                    from streamlit_js import st_js
+                    import base64
+                    import requests
                     
-            except Exception as e:
-                st.error(f"❌ Print error: {str(e)}")
+                    # Fetch image server-side to avoid CORS issues
+                    if isinstance(pdf_image, str):
+                        # Fetch from URL
+                        img_response = requests.get(pdf_image)
+                        pdf_bytes = img_response.content
+                    else:
+                        # Already bytes
+                        pdf_bytes = pdf_image
+                    
+                    # Convert to base64
+                    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                    
+                    # Get API key from environment
+                    api_key = 'my-custom-key'
+                    
+                    # JavaScript code to send to print server
+                    js_code = f"""
+                    (async () => {{
+                        try {{
+                            // Send to print server
+                            const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                                method: 'POST',
+                                headers: {{
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': '{api_key}'
+                                }},
+                                body: JSON.stringify({{
+                                    document: '{pdf_b64}',
+                                    format: 'pdf',
+                                    filename: 'highlighted_legal_description.pdf'
+                                }})
+                            }});
+                            
+                            if (printResponse.ok) {{
+                                return 'success';
+                            }} else {{
+                                const error = await printResponse.json();
+                                return 'error: ' + error.error;
+                            }}
+                        }} catch (error) {{
+                            return 'error: ' + error.message;
+                        }}
+                    }})();
+                    """
+                    
+                    result = st_js(js_code, key="print_pdf_js")
+                    
+                    if result:
+                        if result == 'success':
+                            st.success("✅ Document sent to printer!")
+                        elif result.startswith('error:'):
+                            st.error(f"❌ Print failed: {result[7:]}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Print error: {str(e)}")
+        
+        with col2:
+            if st.button("🖨️ Print Combined (Highlighted + Report)", key="print_combined_pdf"):
+                try:
+                    from streamlit_js import st_js
+                    import base64
+                    import requests
+                    from reportlab.pdfgen import canvas
+                    from reportlab.lib.pagesizes import letter
+                    from PyPDF2 import PdfReader, PdfWriter
+                    import io
+                    
+                    # Get highlighted PDF
+                    if isinstance(pdf_image, str):
+                        img_response = requests.get(pdf_image)
+                        highlighted_bytes = img_response.content
+                    else:
+                        highlighted_bytes = pdf_image
+                    
+                    # Get PDF report
+                    report_url = st.session_state.get('report_url')
+                    if not report_url:
+                        st.error("❌ No PDF report available. Generate report first.")
+                        continue
+                    
+                    report_response = requests.get(report_url)
+                    if report_response.status_code != 200:
+                        st.error("❌ Could not download PDF report from GCS")
+                        continue
+                    
+                    report_bytes = report_response.content
+                    
+                    # Combine PDFs using PyPDF2
+                    writer = PdfWriter()
+                    
+                    # Add highlighted PDF pages
+                    highlighted_reader = PdfReader(io.BytesIO(highlighted_bytes))
+                    for page in highlighted_reader.pages:
+                        writer.add_page(page)
+                    
+                    # Add report PDF pages
+                    report_reader = PdfReader(io.BytesIO(report_bytes))
+                    for page in report_reader.pages:
+                        writer.add_page(page)
+                    
+                    # Create combined PDF
+                    combined_buffer = io.BytesIO()
+                    writer.write(combined_buffer)
+                    combined_bytes = combined_buffer.getvalue()
+                    
+                    # Upload combined PDF to GCS
+                    from utils.gcs_storage import upload_pdf_file
+                    filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
+                    combined_url = upload_pdf_file(combined_bytes, f"combined-{filename_base}.pdf")
+                    
+                    if combined_url:
+                        st.success(f"✅ Combined PDF uploaded to GCS")
+                        st.session_state.combined_url = combined_url
+                    
+                    # Convert to base64 for printing
+                    combined_b64 = base64.b64encode(combined_bytes).decode('utf-8')
+                    
+                    # Get API key from environment
+                    api_key = 'my-custom-key'
+                    
+                    # JavaScript code to send to print server
+                    js_code = f"""
+                    (async () => {{
+                        try {{
+                            // Send to print server
+                            const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                                method: 'POST',
+                                headers: {{
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': '{api_key}'
+                                }},
+                                body: JSON.stringify({{
+                                    document: '{combined_b64}',
+                                    format: 'pdf',
+                                    filename: 'combined-highlighted-report.pdf'
+                                }})
+                            }});
+                            
+                            if (printResponse.ok) {{
+                                return 'success';
+                            }} else {{
+                                const error = await printResponse.json();
+                                return 'error: ' + error.error;
+                            }}
+                        }} catch (error) {{
+                            return 'error: ' + error.message;
+                        }}
+                    }})();
+                    """
+                    
+                    result = st_js(js_code, key="print_combined_js")
+                    
+                    if result:
+                        if result == 'success':
+                            st.success("✅ Combined document sent to printer!")
+                        elif result.startswith('error:'):
+                            st.error(f"❌ Print failed: {result[7:]}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Combined print error: {str(e)}")
 
 if __name__ == "__main__":
     main()
