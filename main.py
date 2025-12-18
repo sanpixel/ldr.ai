@@ -1534,64 +1534,21 @@ def process_pdf(uploaded_file):
                                 }})();
                                 """
                                 
-                                # Combine highlighted PNG and PDF report for printing
+                                # Just print the fucking highlighted image
+                                result = st_js(js_code, key="auto_print_pdf_js")
+                                
+                                # Print the PDF report separately 
                                 report_url = st.session_state.get('report_url')
                                 if report_url:
                                     try:
-                                        from reportlab.pdfgen import canvas
-                                        from reportlab.lib.pagesizes import letter
-                                        from PIL import Image
-                                        import io
+                                        import time
+                                        time.sleep(5)  # Wait 5 seconds
                                         
-                                        # Download PDF report from GCS
                                         report_response = requests.get(report_url)
                                         if report_response.status_code == 200:
-                                            # Create combined PDF
-                                            combined_buffer = io.BytesIO()
+                                            report_b64 = base64.b64encode(report_response.content).decode('utf-8')
                                             
-                                            # Convert highlighted PNG to PDF page
-                                            png_pdf_buffer = io.BytesIO()
-                                            c = canvas.Canvas(png_pdf_buffer, pagesize=letter)
-                                            
-                                            # Add highlighted image as first page
-                                            img = Image.open(io.BytesIO(pdf_image))
-                                            img_width, img_height = img.size
-                                            page_width, page_height = letter
-                                            
-                                            # Scale image to fit page
-                                            scale = min(page_width/img_width, page_height/img_height)
-                                            scaled_width = img_width * scale
-                                            scaled_height = img_height * scale
-                                            
-                                            # Center image on page
-                                            x = (page_width - scaled_width) / 2
-                                            y = (page_height - scaled_height) / 2
-                                            
-                                            c.drawInlineImage(img, x, y, scaled_width, scaled_height)
-                                            c.save()
-                                            
-                                            # Merge PNG-PDF with Report-PDF
-                                            from PyPDF2 import PdfReader, PdfWriter
-                                            writer = PdfWriter()
-                                            
-                                            # Add PNG page
-                                            png_pdf_buffer.seek(0)
-                                            png_reader = PdfReader(png_pdf_buffer)
-                                            writer.add_page(png_reader.pages[0])
-                                            
-                                            # Add report pages
-                                            report_reader = PdfReader(io.BytesIO(report_response.content))
-                                            for page in report_reader.pages:
-                                                writer.add_page(page)
-                                            
-                                            # Write combined PDF
-                                            writer.write(combined_buffer)
-                                            combined_buffer.seek(0)
-                                            
-                                            # Send combined PDF to printer
-                                            combined_b64 = base64.b64encode(combined_buffer.getvalue()).decode('utf-8')
-                                            
-                                            combined_js_code = f"""
+                                            report_js = f"""
                                             (async () => {{
                                                 try {{
                                                     const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
@@ -1601,9 +1558,9 @@ def process_pdf(uploaded_file):
                                                             'X-API-Key': '{api_key}'
                                                         }},
                                                         body: JSON.stringify({{
-                                                            document: '{combined_b64}',
+                                                            document: '{report_b64}',
                                                             format: 'pdf',
-                                                            filename: 'combined-legal-description.pdf'
+                                                            filename: 'survey-report.pdf'
                                                         }})
                                                     }});
                                                     return 'sent';
@@ -1613,13 +1570,9 @@ def process_pdf(uploaded_file):
                                             }})();
                                             """
                                             
-                                            st_js(combined_js_code, key="auto_print_combined_js")
+                                            st_js(report_js, key="auto_print_report_simple")
                                     except Exception as e:
-                                        # Fallback to original single print
-                                        result = st_js(js_code, key="auto_print_pdf_js")
-                                else:
-                                    # No report available, just print highlighted
-                                    result = st_js(js_code, key="auto_print_pdf_js")
+                                        pass
 
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
