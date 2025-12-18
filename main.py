@@ -2029,7 +2029,11 @@ def main():
     except:
         version = "1.0.0"
     
-    st.title(f"Legal Description Reader v{version}")
+    # Generate color based on version
+    import hashlib
+    color_hash = hashlib.md5(version.encode()).hexdigest()[:6]
+    
+    st.markdown(f'<h1 style="color: #{color_hash};">Legal Description Reader v{version}</h1>', unsafe_allow_html=True)
     
     # Debug toggle in sidebar
     with st.sidebar:

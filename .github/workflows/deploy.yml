@@ -14,31 +14,12 @@ env:
 jobs:
   deploy:
     permissions:
-      contents: write
       id-token: write
 
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
-
-    - name: Auto-increment version
-      run: |
-        VERSION=$(cat VERSION | tr -d '\n\r ')
-        NEW_VERSION=$(echo $VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-        echo $NEW_VERSION > VERSION
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add VERSION
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          git commit -m "Auto-increment version to $NEW_VERSION"
-          git push
-        fi
 
     - name: Google Auth
       id: auth
