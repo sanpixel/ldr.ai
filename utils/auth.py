@@ -12,6 +12,11 @@ from supabase import create_client, Client
 from utils.st_local_storage import StLocalStorage
 
 try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+try:
     from streamlit_js import st_js
 except ImportError:
     st.error("Please install streamlit-js: pip install streamlit-js")
@@ -247,6 +252,43 @@ def get_current_user() -> Optional[Dict[str, Any]]:
 def get_supabase_client() -> Client:
     """Get the Supabase client for database operations"""
     return supabase
+
+
+def get_openai_key():
+    """Get OpenAI API key from environment or local file"""
+    # First try environment variable (works for both production and local .env)
+    env_key = os.environ.get("OPENAI_API_KEY")
+    if env_key:
+        return env_key
+    
+    # Fallback to local JSON file (legacy local development - keeps existing setup working)
+    local_key_file = r"C:\dev\openai-key.json"
+    try:
+        if os.path.exists(local_key_file):
+            with open(local_key_file, 'r') as f:
+                key_data = json.load(f)
+                key = key_data.get('OPENAI_API_KEY')
+                return key
+    except Exception as e:
+        print(f"Warning: Could not read local key file {local_key_file}: {e}")
+    
+    return None
+
+
+def get_openai_client():
+    """Get OpenAI client instance"""
+    if OpenAI is None:
+        return None
+    
+    api_key = get_openai_key()
+    if not api_key:
+        return None
+    
+    try:
+        return OpenAI(api_key=api_key)
+    except Exception as e:
+        print(f"Warning: Could not create OpenAI client: {e}")
+        return None
 
 
 def show_login_button():

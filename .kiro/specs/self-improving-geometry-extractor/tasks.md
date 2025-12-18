@@ -114,138 +114,187 @@
   - Create logging for rule loading issues and fallback scenarios
   - _Requirements: 4.5_
 
-- [ ] 5. Create Gold Dataset Infrastructure
+- [x] 5. Create Gold Dataset Infrastructure
+
+
   - Design gold_dataset database table schema
   - Implement GoldDatasetManager class for CRUD operations
   - Collect initial 40 real legal descriptions for gold dataset
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 5.1 Write property test for gold dataset completeness
+- [x] 5.1 Write property test for gold dataset completeness
+
+
   - **Property 9: Gold dataset completeness**
   - **Validates: Requirements 5.2**
 
-- [ ] 5.2 Implement gold dataset collection workflow
+- [x] 5.2 Implement gold dataset collection workflow
+
+
   - Create UI for manual verification and correction of outputs
   - Implement storage of both original and corrected outputs
   - Add gold dataset entry creation with required fields (id, text, gold_output)
   - _Requirements: 5.2, 5.5_
 
-- [ ] 6. Implement Fingerprinting System
+- [x] 6. Implement Fingerprinting System
+
+
   - Create fingerprint generation algorithm for normalized line comparison
   - Implement case standardization and numeric value rounding
   - Create type-specific fingerprint formats for course, curve, and reference lines
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 6.1 Write property test for fingerprint correspondence
+- [x] 6.1 Write property test for fingerprint correspondence
+
+
   - **Property 10: Fingerprint-to-line correspondence**
   - **Validates: Requirements 6.1**
 
-- [ ] 6.2 Write property test for fingerprint normalization
+- [x] 6.2 Write property test for fingerprint normalization
+
   - **Property 11: Fingerprint normalization consistency**
   - **Validates: Requirements 6.2**
 
-- [ ] 6.3 Implement fingerprint format specifications
+- [x] 6.3 Implement fingerprint format specifications
+
   - Create course fingerprint format: "course|S|45|12|30|E|125.00"
   - Create reference fingerprint format: "ref_segment|row_line|duncan drive|northerly"
   - Exclude raw text from fingerprint content
   - _Requirements: 6.3, 6.4, 6.5_
 
-- [ ] 7. Build Testing Harness
+- [x] 7. Build Testing Harness
+
+
   - Create automated comparison system using fingerprints
   - Implement failure detection for missing, extra, and mismatched lines
   - Generate detailed failures.json output for patch generation
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 7.1 Write property test for harness comparison method
+- [x] 7.1 Write property test for harness comparison method
+
+
   - **Property 12: Harness fingerprint-based comparison**
   - **Validates: Requirements 7.1**
 
-- [ ] 7.2 Implement harness execution engine
+- [x] 7.2 Implement harness execution engine
+
   - Create test runner that processes all gold dataset entries
   - Implement fingerprint-based comparison logic
   - Generate structured failure reports with sufficient detail for automation
   - _Requirements: 7.2, 7.3, 7.4_
 
-- [ ] 8. Create Failure Clustering System
+- [x] 8. Create Failure Clustering System
+
+
   - Implement clustering by missing fingerprint patterns
   - Add clustering by extractor_id for targeted fixes
   - Create prioritization logic to identify top 3 failure classes
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 8.1 Implement clustering algorithms
+- [x] 8.1 Implement clustering algorithms
+
   - Group failures by missing fingerprint patterns
   - Group failures by extractor_id that failed to match
   - Filter out single-occurrence failures for initial focus
   - _Requirements: 8.1, 8.2, 8.4_
 
-- [ ] 9. Checkpoint - Ensure all tests pass
+- [x] 9. Checkpoint - Ensure all tests pass
+
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Build GPT Patch Generator
+- [x] 10. Build GPT Patch Generator
+
+
   - Create prompt template for patch generation based on failure analysis
   - Implement patch format with add_pattern, modify_pattern, disable_pattern operations
   - Ensure JSON-only output without prose explanations
   - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 10.1 Design patch generation prompt
+- [x] 10.1 Design patch generation prompt
+
+
   - Create structured prompt that includes failing texts, expected fingerprints, and current rules
   - Specify JSON output format with required operation types
   - Target specific failure patterns identified by clustering
   - _Requirements: 9.1, 9.4_
 
-- [ ] 11. Implement Patch Application System
+- [x] 11. Implement Patch Application System
+
+
   - Create patch validation with regex compilation checking
   - Implement automatic patch discard for compilation failures
   - Add versioned rule saving and current.json update mechanism
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 11.1 Write property test for patch validation
+- [x] 11.1 Write property test for patch validation
+
+
   - **Property 13: Patch validation before deployment**
   - **Validates: Requirements 10.2**
 
-- [ ] 11.2 Implement patch application workflow
+- [x] 11.2 Implement patch application workflow
+
+
   - Apply patch operations to create new rules object
   - Validate regex compilation before deployment
   - Save valid patches as incremented version files in GCS
   - _Requirements: 10.1, 10.4, 10.5_
 
-- [ ] 12. Create Regression Testing System
+- [x] 12. Create Regression Testing System
+
+
   - Implement automatic harness re-run after patch application
   - Add failure count comparison and improvement validation
   - Create automatic rollback mechanism for regressions
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 12.1 Write property test for improvement validation
+- [x] 12.1 Write property test for improvement validation
+
+
   - **Property 14: Improvement validation through failure reduction**
   - **Validates: Requirements 11.2**
 
-- [ ] 12.2 Write property test for automatic rollback
+- [x] 12.2 Write property test for automatic rollback
+
   - **Property 15: Automatic rollback on regression**
   - **Validates: Requirements 11.4**
 
-- [ ] 12.3 Implement regression detection and rollback
+- [x] 12.3 Implement regression detection and rollback
+
+
   - Compare new version failure count with previous version
   - Detect when previously passing cases now fail
   - Automatically rollback to previous version when regression detected
   - _Requirements: 11.3, 11.4_
 
-- [ ] 13. Integrate GPT Fine-Tuning Loop
+- [x] 13. Integrate GPT Fine-Tuning Loop
+
+
   - Implement training data collection with raw text and final bucket classification
   - Create JSONL export format for OpenAI fine-tuning
   - Add fine-tuning upload and model deployment workflow
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
-- [ ] 13.1 Write property test for training data format
+- [x] 13.1 Write property test for training data format
+
+
   - **Property 16: Training data export format compliance**
   - **Validates: Requirements 12.2**
 
-- [ ] 13.2 Implement fine-tuning data pipeline
+- [x] 13.2 Implement fine-tuning data pipeline
+
+
   - Store raw text and bucket classification for each processed description
   - Export data in JSONL format with proper message structure
   - Maintain backward compatibility with existing data
   - _Requirements: 12.1, 12.5_
 
-- [ ] 14. Optimize Runtime Processing Flow
+- [x] 14. Optimize Runtime Processing Flow
+
+
   - Implement classifier-first processing order
   - Add early termination for no_bearings classification
   - Integrate regex extractor with GPT candidate assistance for partial results
