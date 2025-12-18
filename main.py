@@ -3070,28 +3070,39 @@ def main():
                     js_code = f"""
                     (async () => {{
                         try {{
-                            // Send to print server
+                            // Add mobile-specific headers and error handling
                             const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
-                                    'X-API-Key': '{api_key}'
+                                    'Accept': 'application/json',
+                                    'X-API-Key': '{api_key}',
+                                    'User-Agent': navigator.userAgent || 'Streamlit-Mobile'
                                 }},
                                 body: JSON.stringify({{
                                     document: '{pdf_b64}',
                                     format: 'pdf',
                                     filename: 'highlighted_legal_description.pdf'
-                                }})
+                                }}),
+                                mode: 'cors',
+                                credentials: 'omit'
                             }});
                             
                             if (printResponse.ok) {{
                                 return 'success';
                             }} else {{
-                                const error = await printResponse.json();
-                                return 'error: ' + error.error;
+                                const responseText = await printResponse.text();
+                                let errorMsg = 'HTTP ' + printResponse.status;
+                                try {{
+                                    const errorJson = JSON.parse(responseText);
+                                    errorMsg = errorJson.error || errorMsg;
+                                }} catch (e) {{
+                                    errorMsg = responseText || errorMsg;
+                                }}
+                                return 'error: ' + errorMsg;
                             }}
                         }} catch (error) {{
-                            return 'error: ' + error.message;
+                            return 'error: ' + error.message + ' (network or CORS issue)';
                         }}
                     }})();
                     """
@@ -3191,28 +3202,39 @@ def main():
                     js_code = f"""
                     (async () => {{
                         try {{
-                            // Send to print server
+                            // Add mobile-specific headers and error handling
                             const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
-                                    'X-API-Key': '{api_key}'
+                                    'Accept': 'application/json',
+                                    'X-API-Key': '{api_key}',
+                                    'User-Agent': navigator.userAgent || 'Streamlit-Mobile'
                                 }},
                                 body: JSON.stringify({{
                                     document: '{combined_b64}',
                                     format: 'pdf',
                                     filename: 'combined-highlighted-report.pdf'
-                                }})
+                                }}),
+                                mode: 'cors',
+                                credentials: 'omit'
                             }});
                             
                             if (printResponse.ok) {{
                                 return 'success';
                             }} else {{
-                                const error = await printResponse.json();
-                                return 'error: ' + error.error;
+                                const responseText = await printResponse.text();
+                                let errorMsg = 'HTTP ' + printResponse.status;
+                                try {{
+                                    const errorJson = JSON.parse(responseText);
+                                    errorMsg = errorJson.error || errorMsg;
+                                }} catch (e) {{
+                                    errorMsg = responseText || errorMsg;
+                                }}
+                                return 'error: ' + errorMsg;
                             }}
                         }} catch (error) {{
-                            return 'error: ' + error.message;
+                            return 'error: ' + error.message + ' (network or CORS issue)';
                         }}
                     }})();
                     """
