@@ -21,6 +21,19 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Auto-increment version
+      run: |
+        VERSION=$(cat VERSION)
+        NEW_VERSION=$(echo $VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+        echo $NEW_VERSION > VERSION
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add VERSION
+        git commit -m "Auto-increment version to $NEW_VERSION" || exit 0
+        git push
 
     - name: Google Auth
       id: auth
