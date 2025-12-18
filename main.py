@@ -3121,12 +3121,12 @@ def main():
                     report_url = st.session_state.get('report_url')
                     if not report_url:
                         st.error("❌ No PDF report available. Generate report first.")
-                        continue
+                        return
                     
                     report_response = requests.get(report_url)
                     if report_response.status_code != 200:
                         st.error("❌ Could not download PDF report from GCS")
-                        continue
+                        return
                     
                     report_bytes = report_response.content
                     
