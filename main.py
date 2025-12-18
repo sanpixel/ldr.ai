@@ -1536,6 +1536,42 @@ def process_pdf(uploaded_file):
                                 
                                 result = st_js(js_code, key="auto_print_pdf_js")
                                 
+                                # Auto-print PDF report after highlighted PDF
+                                report_url = st.session_state.get('report_url')
+                                if report_url:
+                                    try:
+                                        import time
+                                        time.sleep(3)  # Wait 3 seconds
+                                        
+                                        response = requests.get(report_url)
+                                        if response.status_code == 200:
+                                            pdf_report_b64 = base64.b64encode(response.content).decode('utf-8')
+                                            
+                                            report_js_code = f"""
+                                            (async () => {{
+                                                try {{
+                                                    const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                                                        method: 'POST',
+                                                        headers: {{
+                                                            'Content-Type': 'application/json',
+                                                            'X-API-Key': '{api_key}'
+                                                        }},
+                                                        body: JSON.stringify({{
+                                                            document: '{pdf_report_b64}',
+                                                            format: 'pdf',
+                                                            filename: 'survey-report.pdf'
+                                                        }})
+                                                    }});
+                                                    return 'sent';
+                                                }} catch (error) {{
+                                                    return 'error: ' + error.message;
+                                                }}
+                                            }})();
+                                            """
+                                            
+                                            st_js(report_js_code, key="auto_print_report_js")
+                                    except Exception as e:
+                                        pass
 
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
@@ -2644,10 +2680,8 @@ def main():
         except:
             pass  # Ignore auth errors in this section
             
-        # Try to get image URL from GCS first, fallback to session state
-        from utils.gcs_storage import get_latest_pdf_preview_url
-        pdf_image_url = get_latest_pdf_preview_url()
-        pdf_image = pdf_image_url if pdf_image_url else st.session_state.get('highlighted_url') or st.session_state.get('image_url')
+        # Show highlighted/processed file
+        pdf_image = st.session_state.get('highlighted_url')
         
         if pdf_image:
             # Show filename as caption
@@ -3066,8 +3100,17 @@ def main():
     pdf_image = st.session_state.get('highlighted_url')
     
     if pdf_image:
-        st.subheader("PDF Document")
+        st.subheader("PDF Report")
         st.write("Please review your document shown below to verify the system correctly recognized the meets and bounds")
+        
+        # Show PDF report from GCS if available
+        report_url = st.session_state.get('report_url')
+        if report_url:
+            st.write("📊 Survey Report:")
+            # For PDF reports, we can't display directly in Streamlit, so show download link
+            st.markdown(f"[📄 View Survey Report]({report_url})")
+        
+        # Show highlighted image
         filename = st.session_state.get('filename', 'Unknown')
         st.image(pdf_image, caption=filename, use_container_width=True)
         
