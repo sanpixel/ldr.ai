@@ -2,7 +2,7 @@ name: Deploy to Cloud Run
 
 on:
   push:
-    branches: [ main, dev, prod, vision ]
+    branches: [ main, dev, prod, vision, regex ]
   workflow_dispatch:
 
 env:
