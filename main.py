@@ -1534,20 +1534,64 @@ def process_pdf(uploaded_file):
                                 }})();
                                 """
                                 
-                                result = st_js(js_code, key="auto_print_pdf_js")
-                                
-                                # Auto-print PDF report after highlighted PDF
+                                # Combine highlighted PNG and PDF report for printing
                                 report_url = st.session_state.get('report_url')
                                 if report_url:
                                     try:
-                                        import time
-                                        time.sleep(3)  # Wait 3 seconds
+                                        from reportlab.pdfgen import canvas
+                                        from reportlab.lib.pagesizes import letter
+                                        from PIL import Image
+                                        import io
                                         
-                                        response = requests.get(report_url)
-                                        if response.status_code == 200:
-                                            pdf_report_b64 = base64.b64encode(response.content).decode('utf-8')
+                                        # Download PDF report from GCS
+                                        report_response = requests.get(report_url)
+                                        if report_response.status_code == 200:
+                                            # Create combined PDF
+                                            combined_buffer = io.BytesIO()
                                             
-                                            report_js_code = f"""
+                                            # Convert highlighted PNG to PDF page
+                                            png_pdf_buffer = io.BytesIO()
+                                            c = canvas.Canvas(png_pdf_buffer, pagesize=letter)
+                                            
+                                            # Add highlighted image as first page
+                                            img = Image.open(io.BytesIO(pdf_image))
+                                            img_width, img_height = img.size
+                                            page_width, page_height = letter
+                                            
+                                            # Scale image to fit page
+                                            scale = min(page_width/img_width, page_height/img_height)
+                                            scaled_width = img_width * scale
+                                            scaled_height = img_height * scale
+                                            
+                                            # Center image on page
+                                            x = (page_width - scaled_width) / 2
+                                            y = (page_height - scaled_height) / 2
+                                            
+                                            c.drawInlineImage(img, x, y, scaled_width, scaled_height)
+                                            c.save()
+                                            
+                                            # Merge PNG-PDF with Report-PDF
+                                            from PyPDF2 import PdfReader, PdfWriter
+                                            writer = PdfWriter()
+                                            
+                                            # Add PNG page
+                                            png_pdf_buffer.seek(0)
+                                            png_reader = PdfReader(png_pdf_buffer)
+                                            writer.add_page(png_reader.pages[0])
+                                            
+                                            # Add report pages
+                                            report_reader = PdfReader(io.BytesIO(report_response.content))
+                                            for page in report_reader.pages:
+                                                writer.add_page(page)
+                                            
+                                            # Write combined PDF
+                                            writer.write(combined_buffer)
+                                            combined_buffer.seek(0)
+                                            
+                                            # Send combined PDF to printer
+                                            combined_b64 = base64.b64encode(combined_buffer.getvalue()).decode('utf-8')
+                                            
+                                            combined_js_code = f"""
                                             (async () => {{
                                                 try {{
                                                     const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
@@ -1557,9 +1601,9 @@ def process_pdf(uploaded_file):
                                                             'X-API-Key': '{api_key}'
                                                         }},
                                                         body: JSON.stringify({{
-                                                            document: '{pdf_report_b64}',
+                                                            document: '{combined_b64}',
                                                             format: 'pdf',
-                                                            filename: 'survey-report.pdf'
+                                                            filename: 'combined-legal-description.pdf'
                                                         }})
                                                     }});
                                                     return 'sent';
@@ -1569,9 +1613,13 @@ def process_pdf(uploaded_file):
                                             }})();
                                             """
                                             
-                                            st_js(report_js_code, key="auto_print_report_js")
+                                            st_js(combined_js_code, key="auto_print_combined_js")
                                     except Exception as e:
-                                        pass
+                                        # Fallback to original single print
+                                        result = st_js(js_code, key="auto_print_pdf_js")
+                                else:
+                                    # No report available, just print highlighted
+                                    result = st_js(js_code, key="auto_print_pdf_js")
 
                         except Exception as e:
                             st.error(f"🖨️ Auto-print error: {str(e)}")
@@ -3103,16 +3151,23 @@ def main():
         st.subheader("PDF Report")
         st.write("Please review your document shown below to verify the system correctly recognized the meets and bounds")
         
-        # Show PDF report from GCS if available
+        # Show PDF report from GCS
         report_url = st.session_state.get('report_url')
         if report_url:
-            st.write("📊 Survey Report:")
-            # For PDF reports, we can't display directly in Streamlit, so show download link
-            st.markdown(f"[📄 View Survey Report]({report_url})")
-        
-        # Show highlighted image
-        filename = st.session_state.get('filename', 'Unknown')
-        st.image(pdf_image, caption=filename, use_container_width=True)
+            try:
+                import requests
+                from pdf2image import convert_from_bytes
+                
+                # Download PDF report from GCS
+                response = requests.get(report_url)
+                if response.status_code == 200:
+                    # Convert PDF to image for display
+                    images = convert_from_bytes(response.content, first_page=1, last_page=1, dpi=150)
+                    if images:
+                        filename = st.session_state.get('filename', 'Survey Report')
+                        st.image(images[0], caption=f"📊 {filename} - Survey Report", use_container_width=True)
+            except Exception as e:
+                pass
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
