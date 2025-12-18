@@ -1142,7 +1142,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent yellow highlight
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    fill=(255, 255, 0, 50)  # Yellow with 50/255 opacity, no outline
+                    fill=(255, 255, 0, 17)  # Yellow with 6.6% opacity (17/255), no outline
                 )
             
             # Check if this matches thence
@@ -1153,7 +1153,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent blue highlight
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    fill=(0, 0, 255, 50)  # Blue with 50/255 opacity, no outline
+                    fill=(0, 0, 255, 17)  # Blue with 6.6% opacity (17/255), no outline
                 )
             
             # Check if this matches evidence words
@@ -1164,7 +1164,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent green highlight for evidence data
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    fill=(0, 255, 0, 50)  # Green with 50/255 opacity, no outline
+                    fill=(0, 255, 0, 17)  # Green with 6.6% opacity (17/255), no outline
                 )
             
         
