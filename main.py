@@ -270,9 +270,9 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         user_email = st.session_state.get('user', {}).get('email', 'anonymous')
         
         if st.session_state.get('debug_enabled', False):
-            st.write(f"🔍 DEBUG: Before reordering - keys: {list(reasoning_data.keys())}")
-            st.write(f"🔍 DEBUG: user_email: '{user_email}'")
-            st.write(f"🔍 DEBUG: filename: '{filename if filename else 'Unknown'}'")
+            debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Before reordering - keys: {list(reasoning_data.keys())}")
+            debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: user_email: '{user_email}'")
+            debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: filename: '{filename if filename else 'Unknown'}'")
         
         # Create new ordered dictionary with filename and user_email first
         ordered_reasoning_data = {
@@ -287,6 +287,11 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         ordered_reasoning_data['page_count'] = page_count
         ordered_reasoning_data['text_length'] = len(text) if text else 0
         ordered_reasoning_data['bearing_count'] = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
+        
+        # Count all variations of "thence" in the text
+        thence_matches = re.findall(r'(?i)\bthence\b,?', text if text else '')
+        ordered_reasoning_data['thence_count'] = len(thence_matches)
+        
         ordered_reasoning_data['ocr_confidence'] = 0.85  # Placeholder - OCR libraries don't always provide confidence scores
         ordered_reasoning_data['model_version'] = "ft:gpt-3.5-turbo-0125:personal:ldr:BEoe3v67"
         ordered_reasoning_data['supplemental_info_found'] = bool(st.session_state.get('supplemental_info'))  # Boolean: found Land Lot/County data?
@@ -683,7 +688,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         schema_output.update_bucket_classification()
         
         if st.session_state.get('debug_enabled', False):
-            st.write(f"🔍 DEBUG: Final schema - Bucket: {schema_output.bucket}, Lines: {len(schema_output.lines)}")
+            debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Final schema - Bucket: {schema_output.bucket}, Lines: {len(schema_output.lines)}")
             st.json(schema_output.to_dict())
         
         return schema_output
@@ -715,7 +720,7 @@ def convert_schema_to_legacy_bearings(schema_output):
             legacy_bearings.append(legacy_bearing)
     
     if st.session_state.get('debug_enabled', False):
-        st.write(f"🔍 DEBUG: Converted to {len(legacy_bearings)} legacy bearings")
+        debug_log(f"🔍 DEBUG [convert_schema_to_legacy_bearings]: Converted to {len(legacy_bearings)} legacy bearings")
     
     return legacy_bearings
 
@@ -727,7 +732,7 @@ def store_extraction_results(schema_output, bearings):
     st.session_state.line_count = len(bearings)
     
     if st.session_state.get('debug_enabled', False):
-        st.write(f"🔍 DEBUG: Stored extraction results - Bucket: {schema_output.bucket}, Bearings: {len(bearings)}")
+        debug_log(f"🔍 DEBUG [store_extraction_results]: Stored extraction results - Bucket: {schema_output.bucket}, Bearings: {len(bearings)}")
 
 
 def convert_legacy_to_schema(legacy_bearings):
@@ -1654,21 +1659,21 @@ def process_pdf(uploaded_file):
                 file_size = len(uploaded_file.getvalue())
                 page_count = len(images)
                 if st.session_state.get('debug_enabled', False):
-                    st.write(f"🔍 DEBUG: Extracted filename: '{filename}' from uploaded file")
-                    st.write(f"🔍 DEBUG: File size: {file_size} bytes")
-                    st.write(f"🔍 DEBUG: Page count: {page_count} pages")
+                    debug_log(f"🔍 DEBUG [process_pdf]: Extracted filename: '{filename}' from uploaded file")
+                    debug_log(f"🔍 DEBUG [process_pdf]: File size: {file_size} bytes")
+                    debug_log(f"🔍 DEBUG [process_pdf]: Page count: {page_count} pages")
                 schema_output = extract_bearings_with_gpt(extracted_text, filename, st.session_state.get('user', {}).get('email', 'anonymous'), file_size, page_count)
                 bearings = convert_schema_to_legacy_bearings(schema_output)
                 result_text = f"Schema output: {schema_output.bucket}"
                 # Count bearings in response text
                 total_in_response = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
-                st.info(f"Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
+                st.info(f"[process_pdf] Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
                 
                 # Store the GPT response for debug display
                 st.session_state.gpt_response = result_text
                 
                 if bearings:
-                    st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
+                    st.success(f"[process_pdf] ✅ Successfully extracted {len(bearings)} bearings!")
                     
                     return bearings, schema_output
                 else:
@@ -2366,7 +2371,7 @@ def main():
                             report_url = upload_pdf_file(pdf_data, f"survey-report-{filename_base}.pdf")
                             if report_url:
                                 st.session_state.report_url = report_url
-                                st.info("📊 Auto-generated survey report")
+                                st.info("[main] 📊 Auto-generated survey report")
                                 
                                 # Auto-print combined PDF if enabled
                                 if st.session_state.get('auto_print', False):
@@ -2374,7 +2379,7 @@ def main():
                     except Exception as e:
                         pass
                     
-                    st.success(f"✅ Lines drawn from meets and bounds shown below")
+                    st.success(f"[main] ✅ Lines drawn from meets and bounds shown below")
         
         # Available PDF Files Selector (only for sanjay149@gmail.com)
         user_email = st.session_state.get('user', {}).get('email', '')
@@ -3155,7 +3160,7 @@ def main():
     # Display supplemental information if available
     if st.session_state.supplemental_info:
         st.subheader("Property Information")
-        col1, col2, col3 = st.columns([4, 3, 3])
+        col1, col2, col3, col4 = st.columns([3, 3, 3, 3])
 
         with col1:
             st.metric("Land Lot", st.session_state.supplemental_info.get('land_lot', 'N/A'))
@@ -3163,6 +3168,17 @@ def main():
             st.metric("District", st.session_state.supplemental_info.get('district', 'N/A'))
         with col3:
             st.metric("County", st.session_state.supplemental_info.get('county', 'N/A'))
+        with col4:
+            # Get thence count from most recent classification data
+            thence_count = 'N/A'
+            try:
+                from utils.classification import get_filtered_classification_data
+                recent_data = get_filtered_classification_data(limit=1)
+                if recent_data and len(recent_data) > 0:
+                    thence_count = recent_data[0].get('thence_count', 'N/A')
+            except Exception:
+                pass
+            st.metric("Thence", thence_count)
 
     # Display PDF image if available
     # Get highlighted image from session state

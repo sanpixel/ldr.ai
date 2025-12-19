@@ -87,6 +87,36 @@
         "monument": 1
       },
       "description": "Monument/reference from GPT MONUMENT: lines", 
+      "enabled": false
+    },
+    {
+      "extractor_id": "monument_to_point",
+      "type": "monument",
+      "regex": "to\\s+(a\\s+point)",
+      "map": {
+        "monument": 1
+      },
+      "description": "Monument: to a point",
+      "enabled": true
+    },
+    {
+      "extractor_id": "monument_to_iron_pin",
+      "type": "monument", 
+      "regex": "to\\s+(an\\s+iron\\s+pin(?:\\s+found)?)",
+      "map": {
+        "monument": 1
+      },
+      "description": "Monument: to an iron pin or to an iron pin found",
+      "enabled": true
+    },
+    {
+      "extractor_id": "monument_begin_iron_pin",
+      "type": "monument",
+      "regex": "Begin\\s+(an\\s+iron\\s+pin(?:\\s+found)?)",
+      "map": {
+        "monument": 1
+      },
+      "description": "Monument: Begin an iron pin found",
       "enabled": true
     },
     {
