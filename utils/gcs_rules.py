@@ -42,7 +42,7 @@ class GCSRulesManager:
     Provides versioning, rollback, and atomic deployment capabilities
     """
     
-    def __init__(self, bucket_name: str = "ldr-rules-bucket", project_id: str = None):
+    def __init__(self, bucket_name: str = "ldr-ai", project_id: str = None):
         self.bucket_name = bucket_name
         self.project_id = project_id
         self.client = None
@@ -56,10 +56,13 @@ class GCSRulesManager:
                 logger.warning("Google Cloud Storage library not available")
                 return
             
-            if self.project_id:
-                self.client = storage.Client(project=self.project_id)
-            else:
-                self.client = storage.Client()
+            # Use same authentication as gcs_storage.py
+            from utils.gcs_storage import get_gcs_client
+            self.client = get_gcs_client()
+            
+            if not self.client:
+                logger.error("Failed to get authenticated GCS client")
+                return
             
             # Get or create bucket
             self.bucket = self._get_or_create_bucket()
@@ -359,7 +362,7 @@ def create_gcs_rules_manager() -> GCSRulesManager:
     Factory function to create GCS rules manager with appropriate configuration
     Uses environment variables for configuration
     """
-    bucket_name = os.getenv('GCS_RULES_BUCKET', 'ldr-rules-bucket')
+    bucket_name = os.getenv('GCS_RULES_BUCKET', 'ldr-ai')
     project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
     
     return GCSRulesManager(bucket_name=bucket_name, project_id=project_id)

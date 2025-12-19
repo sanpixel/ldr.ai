@@ -1,0 +1,85 @@
+{
+  "version": "000001",
+  "rules": [
+    {
+      "extractor_id": "bearing_verbose_format",
+      "type": "course",
+      "regex": "(North|South)\\s+(\\d+)\\s*(?:°|degrees?|deg|\\s)\\s*(\\d+)\\s*(?:\\'|′|minutes?|min|\\s)\\s*(?:(\\d+)\\s*(?:\"|″|seconds?|sec|\\s)\\s+)?(East|West)",
+      "map": {
+        "cardinal_ns": 1,
+        "degrees": 2,
+        "minutes": 3,
+        "seconds": 4,
+        "cardinal_ew": 5
+      },
+      "description": "Verbose bearing format: North 45 degrees 30 minutes 15 seconds East",
+      "enabled": true
+    },
+    {
+      "extractor_id": "bearing_unified_format",
+      "type": "course",
+      "regex": "(S|South|N|North)[\\s\\.]*(\\d+)(?:[\\s°degrees]+(?:(\\d+)(?:[\\s\\'minutes]+(?:(\\d+(?:\\.\\d+)?)(?:[\\s\"seconds]+)?)?)?)?)?[\\s]*(E|W|East|West)",
+      "map": {
+        "cardinal_ns": 1,
+        "degrees": 2,
+        "minutes": 3,
+        "seconds": 4,
+        "cardinal_ew": 5
+      },
+      "description": "Unified bearing format: S 73° 32' 01\" W or North 71 degrees 51 minutes East",
+      "enabled": true
+    },
+    {
+      "extractor_id": "bearing_long_format",
+      "type": "course",
+      "regex": "(North|South)\\s+(\\d+)\\s+degrees?\\s+(\\d+)\\s+minutes?\\s+(\\d+(?:\\.\\d+)?)\\s+seconds?\\s+(East|West)",
+      "map": {
+        "cardinal_ns": 1,
+        "degrees": 2,
+        "minutes": 3,
+        "seconds": 4,
+        "cardinal_ew": 5
+      },
+      "description": "Long bearing format: North 71 degrees 53 minutes 10 seconds East",
+      "enabled": true
+    },
+    {
+      "extractor_id": "distance_with_units",
+      "type": "distance", 
+      "regex": "DISTANCE:\\s*([\\d\\.]+)\\s*(feet|ft|')?",
+      "map": {
+        "distance": 1,
+        "units": 2
+      },
+      "description": "Distance from GPT DISTANCE: lines",
+      "enabled": true
+    },
+    {
+      "extractor_id": "monument_reference",
+      "type": "monument",
+      "regex": "MONUMENT:\\s*(.+)",
+      "map": {
+        "monument": 1
+      },
+      "description": "Monument/reference from GPT MONUMENT: lines", 
+      "enabled": true
+    },
+    {
+      "extractor_id": "json_section",
+      "type": "reference",
+      "regex": "JSON:\\s*(\\{.*\\})",
+      "map": {
+        "json_content": 1
+      },
+      "description": "JSON section in GPT responses",
+      "enabled": true
+    }
+  ],
+  "metadata": {
+    "created_from": "hardcoded_patterns",
+    "description": "Initial rules extracted from existing codebase",
+    "compatible_with": "legacy_extraction_functions",
+    "created_at": "2025-12-18T22:00:00Z",
+    "gcs_path": "rules/current.json"
+  }
+}

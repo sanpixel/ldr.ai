@@ -43,6 +43,8 @@
 - [x] 1.6 Write property test for explicit bearings classification
 
   - **Property 5: Explicit bearings bucket classification**
+
+
   - **Validates: Requirements 1.5**
 
 - [x] 2. Externalize Regex Rules

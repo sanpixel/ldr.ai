@@ -14,7 +14,7 @@ from utils.gcs_rules import GCSRulesManager
 logger = logging.getLogger(__name__)
 
 
-def setup_gcs_bucket(bucket_name: str = "ldr-rules-bucket", 
+def setup_gcs_bucket(bucket_name: str = "ldr-ai", 
                     project_id: str = None,
                     location: str = "us-central1") -> Dict[str, Any]:
     """
@@ -37,11 +37,13 @@ def setup_gcs_bucket(bucket_name: str = "ldr-rules-bucket",
     }
     
     try:
-        # Initialize client
-        if project_id:
-            client = storage.Client(project=project_id)
-        else:
-            client = storage.Client()
+        # Initialize client using same auth as gcs_storage.py
+        from utils.gcs_storage import get_gcs_client
+        client = get_gcs_client()
+        
+        if not client:
+            results['errors'].append("Failed to get authenticated GCS client")
+            return results
         
         # Check if bucket exists
         bucket = client.bucket(bucket_name)
@@ -123,7 +125,7 @@ def setup_gcs_bucket(bucket_name: str = "ldr-rules-bucket",
     return results
 
 
-def verify_gcs_permissions(bucket_name: str = "ldr-rules-bucket") -> Dict[str, Any]:
+def verify_gcs_permissions(bucket_name: str = "ldr-ai") -> Dict[str, Any]:
     """
     Verify that the current service account has required permissions
     
@@ -142,7 +144,16 @@ def verify_gcs_permissions(bucket_name: str = "ldr-rules-bucket") -> Dict[str, A
     }
     
     try:
-        client = storage.Client()
+        from utils.gcs_storage import get_gcs_client
+        client = get_gcs_client()
+        
+        if not client:
+            return {
+                'success': False,
+                'error': 'Failed to get authenticated GCS client',
+                'permissions': []
+            }
+        
         bucket = client.bucket(bucket_name)
         
         # Test list permission
@@ -200,7 +211,7 @@ def initialize_rules_system() -> Dict[str, Any]:
     
     try:
         # Setup GCS bucket
-        bucket_name = os.getenv('GCS_RULES_BUCKET', 'ldr-rules-bucket')
+        bucket_name = os.getenv('GCS_RULES_BUCKET', 'ldr-ai')
         results['gcs_setup'] = setup_gcs_bucket(bucket_name)
         
         # Verify permissions
@@ -269,8 +280,10 @@ def check_service_account_setup() -> Dict[str, Any]:
         
         # Try to get project info
         try:
-            client = storage.Client()
-            results['project_id'] = client.project
+            from utils.gcs_storage import get_gcs_client
+            client = get_gcs_client()
+            if client:
+                results['project_id'] = client.project
             
             # Try to get service account info from credentials
             if hasattr(client._credentials, 'service_account_email'):

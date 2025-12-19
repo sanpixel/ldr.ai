@@ -433,76 +433,122 @@ Text to analyze:"""
         
         # Fallback to text parsing if JSON not found or failed
         if not bearings:
-            current_bearing = {}
+            # Load rules from GCS using working storage system
+            if st.session_state.get('debug_enabled', False):
+                st.write("🔍 DEBUG: Loading rules from GCS for text parsing")
             
-            # Process all lines to extract bearings (GPT already filtered by classification)
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
+            try:
+                # Use working GCS storage to download rules
+                from utils.gcs_storage import get_gcs_client
+                import json
+                
+                client = get_gcs_client()
+                if client:
+                    bucket = client.bucket('ldr-ai')
+                    blob = bucket.blob('rules/current.json')
+                    
+                    if blob.exists():
+                        rules_json = blob.download_as_text()
+                        rules_data = json.loads(rules_json)
+                        
+                        if st.session_state.get('debug_enabled', False):
+                            st.write(f"🔍 DEBUG: Loaded {len(rules_data.get('rules', []))} rules from GCS")
+                        
+                        # Process all rules from GCS
+                        course_bearings = []
+                        distances = {}
+                        monuments = {}
+                        
+                        for rule in rules_data.get('rules', []):
+                            if not rule.get('enabled'):
+                                continue
+                                
+                            pattern = rule.get('regex')
+                            if not pattern:
+                                continue
+                                
+                            matches = re.finditer(pattern, result_text, re.IGNORECASE)
+                            rule_map = rule.get('map', {})
+                            
+                            if rule.get('type') == 'course':
+                                # Process bearing rules
+                                for match in matches:
+                                    groups = match.groups()
+                                    bearing = {
+                                        'cardinal_ns': groups[rule_map.get('cardinal_ns', 1) - 1] if rule_map.get('cardinal_ns') else None,
+                                        'cardinal_ew': groups[rule_map.get('cardinal_ew', 5) - 1] if rule_map.get('cardinal_ew') else None,
+                                        'degrees': int(groups[rule_map.get('degrees', 2) - 1]) if rule_map.get('degrees') and groups[rule_map.get('degrees', 2) - 1] else 0,
+                                        'minutes': int(groups[rule_map.get('minutes', 3) - 1]) if rule_map.get('minutes') and groups[rule_map.get('minutes', 3) - 1] else 0,
+                                        'seconds': int(float(groups[rule_map.get('seconds', 4) - 1])) if rule_map.get('seconds') and groups[rule_map.get('seconds', 4) - 1] else 0,
+                                        'original_text': match.group(0)
+                                    }
+                                    course_bearings.append(bearing)
+                                    
+                            elif rule.get('type') == 'distance':
+                                # Process distance rules
+                                for match in matches:
+                                    groups = match.groups()
+                                    distance_value = groups[rule_map.get('distance', 1) - 1] if rule_map.get('distance') else None
+                                    if distance_value:
+                                        distances[match.start()] = float(distance_value)
+                                        
+                            elif rule.get('type') == 'monument':
+                                # Process monument rules
+                                for match in matches:
+                                    groups = match.groups()
+                                    monument_value = groups[rule_map.get('monument', 1) - 1] if rule_map.get('monument') else None
+                                    if monument_value:
+                                        monuments[match.start()] = monument_value.strip()
+                        
+                        # Combine bearings with distances and monuments
+                        for bearing in course_bearings:
+                            # Find closest distance and monument
+                            if distances:
+                                bearing['distance'] = list(distances.values())[0]  # Use first distance found
+                            if monuments:
+                                bearing['monument'] = list(monuments.values())[0]  # Use first monument found
+                            
+                            if bearing.get('distance'):
+                                bearings.append(bearing)
+                    else:
+                        if st.session_state.get('debug_enabled', False):
+                            st.warning("🔍 DEBUG: Rules file not found in GCS, falling back to manual parsing")
+                else:
+                    if st.session_state.get('debug_enabled', False):
+                        st.warning("🔍 DEBUG: No GCS client available, falling back to manual parsing")
+                    
+                    # Fallback to manual parsing if rules system fails
+                    current_bearing = {}
+                    
+                    for line in lines:
+                        line = line.strip()
+                        if not line:
+                            continue
 
-                if line.upper().startswith('BEARING:'):
-                    # Save previous bearing if it's complete
+                        if line.upper().startswith('BEARING:'):
+                            if current_bearing.get('distance'):
+                                bearings.append(current_bearing)
+                            
+                            bearing_text = line.split(':', 1)[1].strip()
+                            current_bearing = {'bearing': bearing_text, 'original_text': bearing_text}
+
+                        elif line.upper().startswith('DISTANCE:') and current_bearing:
+                            distance_text = line.split(':', 1)[1].strip()
+                            distance_match = re.search(r'(\d+(?:\.\d+)?)', distance_text)
+                            if distance_match:
+                                current_bearing['distance'] = float(distance_match.group(1))
+
+                        elif line.upper().startswith('MONUMENT:') and current_bearing:
+                            current_bearing['monument'] = line.split(':', 1)[1].strip()
+
+                    # Add the last bearing if complete
                     if current_bearing.get('distance'):
                         bearings.append(current_bearing)
-                    
-                    bearing_text = line.split(':', 1)[1].strip()
-                    current_bearing = {'bearing': bearing_text} 
-
-                    # Try unified pattern for both formats
-                    # Handles: S 73° 32' 01" W AND North 71 degrees 51 minutes 19 seconds East
-                    pattern = r'(S|South|N|North)[\s\.]*(\d+)(?:[\s°degrees]+(?:(\d+)(?:[\s\'minutes]+(?:(\d+(?:\.\d+)?)(?:[\s"seconds]+)?)?)?)?)?[\s]*(E|W|East|West)'
-                    match = re.search(pattern, bearing_text, re.IGNORECASE)
-                    
-                    # Try long format: North 71 degrees 53 minutes 10 seconds East
-                    long_pattern = r'(North|South)\s+(\d+)\s+degrees?\s+(\d+)\s+minutes?\s+(\d+(?:\.\d+)?)\s+seconds?\s+(East|West)'
-                    long_match = re.search(long_pattern, bearing_text, re.IGNORECASE)
-                    
-                    if match:
-                        groups = match.groups()
-                        if st.session_state.get('debug_enabled', False):
-                            st.markdown(f"<small>🔍 DEBUG: Successfully matched '{bearing_text}' | Groups: {groups} | Pattern: Standard</small>", unsafe_allow_html=True)
                         
-                        ns_raw = (groups[0] or '').upper()
-                        ew_raw = (groups[4] or '').upper()
-
-                        current_bearing['cardinal_ns'] = 'South' if 'S' in ns_raw else 'North'
-                        current_bearing['cardinal_ew'] = 'East' if 'E' in ew_raw else 'West'
-                        current_bearing['degrees'] = int(groups[1]) if groups[1] else 0
-                        current_bearing['minutes'] = int(groups[2]) if groups[2] else 0
-                        current_bearing['seconds'] = int(float(groups[3])) if groups[3] else 0
-                        current_bearing['original_text'] = bearing_text
-                        
-                    elif long_match:
-                        groups = long_match.groups()
-                        if st.session_state.get('debug_enabled', False):
-                            st.markdown(f"<small>🔍 DEBUG: Successfully matched LONG '{bearing_text}' | Groups: {groups} | Pattern: Long</small>", unsafe_allow_html=True)
-                        
-                        current_bearing['cardinal_ns'] = groups[0]  # North or South
-                        current_bearing['cardinal_ew'] = groups[4]  # East or West
-                        current_bearing['degrees'] = int(groups[1])
-                        current_bearing['minutes'] = int(groups[2])
-                        current_bearing['seconds'] = int(float(groups[3]))
-                        current_bearing['original_text'] = bearing_text
-                        
-                    else:
-                        current_bearing['original_text'] = bearing_text  # Store even if parsing failed
-
-                elif line.upper().startswith('DISTANCE:') and current_bearing:
-                    distance_text = line.split(':', 1)[1].strip()
-                    distance_match = re.search(r'(\d+(?:\.\d+)?)', distance_text)
-                    if distance_match:
-                        current_bearing['distance'] = float(distance_match.group(1))
-
-                elif line.upper().startswith('MONUMENT:') and current_bearing:
-                    current_bearing['monument'] = line.split(':', 1)[1].strip()
-
-            # Add the last bearing if complete
-            if current_bearing.get('distance'):
-                bearings.append(current_bearing)
-
-            # Return only fully parsed bearings from text parsing
-            bearings = [b for b in bearings if 'cardinal_ns' in b]
+            except Exception as e:
+                if st.session_state.get('debug_enabled', False):
+                    st.error(f"🔍 DEBUG: Rules system failed: {str(e)}")
+                # Continue with empty bearings list
         
         # At this point, bearings is either from JSON or text parsing
         parsed_bearings = bearings
