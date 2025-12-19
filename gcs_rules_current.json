@@ -4,61 +4,57 @@
     {
       "extractor_id": "bearing_verbose_format",
       "type": "course",
-      "regex": "(North|South)\\s+(\\d+)\\s*(?:°|degrees?|deg|\\s)\\s*(\\d+)\\s*(?:\\'|′|minutes?|min|\\s)\\s*(?:(\\d+(?:\\.\\d+)?)\\s*(?:\"|″|seconds?|sec|\\s)\\s+)?(East|West)\\s*([\\d\\.]+)\\s*(?:feet|ft|\\')?",
+      "regex": "(North|South)\\s+(\\d+)\\s*(?:°|degrees?|deg|\\s)\\s*(\\d+)\\s*(?:\\'|′|minutes?|min|\\s)\\s*(?:(\\d+(?:\\.\\d+)?)\\s*(?:\"|″|seconds?|sec|\\s)\\s+)?(East|West)",
       "map": {
         "cardinal_ns": 1,
         "degrees": 2,
         "minutes": 3,
         "seconds": 4,
-        "cardinal_ew": 5,
-        "distance": 6
+        "cardinal_ew": 5
       },
-      "description": "Verbose bearing format with distance: North 45 degrees 30 minutes 15 seconds East 150.00 feet",
+      "description": "Verbose bearing format: North 45 degrees 30 minutes 15 seconds East",
       "enabled": true
     },
     {
       "extractor_id": "bearing_unified_format",
       "type": "course",
-      "regex": "(S|South|N|North)[\\s\\.]*(\\d+)(?:[\\s°degrees]+(?:(\\d+)(?:[\\s\\'minutes]+(?:(\\d+(?:\\.\\d+)?)(?:[\\s\"seconds]+)?)?)?)?)?[\\s]*(E|W|East|West)\\s*([\\d\\.]+)\\s*(?:feet|ft|\\')?",
+      "regex": "(S|South|N|North)[\\s\\.]*(\\d+)(?:[\\s°degrees]+(?:(\\d+)(?:[\\s\\'minutes]+(?:(\\d+(?:\\.\\d+)?)(?:[\\s\"seconds]+)?)?)?)?)?[\\s]*(E|W|East|West)",
       "map": {
         "cardinal_ns": 1,
         "degrees": 2,
         "minutes": 3,
         "seconds": 4,
-        "cardinal_ew": 5,
-        "distance": 6
+        "cardinal_ew": 5
       },
-      "description": "Unified bearing format with distance: S 73° 32' 01\" W 125.50 feet or North 71 degrees 51 minutes East 200 feet",
+      "description": "Unified bearing format: S 73° 32' 01\" W or North 71 degrees 51 minutes East",
       "enabled": true
     },
     {
       "extractor_id": "bearing_long_format",
       "type": "course",
-      "regex": "(North|South)\\s+(\\d+)\\s+degrees?\\s+(\\d+)\\s+minutes?\\s+(\\d+(?:\\.\\d+)?)\\s+seconds?\\s+(East|West)\\s*([\\d\\.]+)\\s*(?:feet|ft|\\')?",
+      "regex": "(North|South)\\s+(\\d+)\\s+degrees?\\s+(\\d+)\\s+minutes?\\s+(\\d+(?:\\.\\d+)?)\\s+seconds?\\s+(East|West)",
       "map": {
         "cardinal_ns": 1,
         "degrees": 2,
         "minutes": 3,
         "seconds": 4,
-        "cardinal_ew": 5,
-        "distance": 6
+        "cardinal_ew": 5
       },
-      "description": "Long bearing format with distance: North 71 degrees 53 minutes 10 seconds East 200.00 feet",
+      "description": "Long bearing format: North 71 degrees 53 minutes 10 seconds East",
       "enabled": true
     },
     {
       "extractor_id": "bearing_symbol_format",
       "type": "course",
-      "regex": "(S|South|N|North)\\s+(\\d+)°\\s*(\\d+)'\\s*(\\d+(?:\\.\\d+)?)\"\\s*(E|W|East|West)\\s*([\\d\\.]+)\\s*(?:feet|ft|\\')?",
+      "regex": "(S|South|N|North)\\s+(\\d+)°\\s*(\\d+)'\\s*(\\d+(?:\\.\\d+)?)\"\\s*(E|W|East|West)",
       "map": {
         "cardinal_ns": 1,
         "degrees": 2,
         "minutes": 3,
         "seconds": 4,
-        "cardinal_ew": 5,
-        "distance": 6
+        "cardinal_ew": 5
       },
-      "description": "Symbol bearing format with distance: S 51° 08' 40\" E 125.50 feet",
+      "description": "Symbol bearing format: S 51° 08' 40\" E",
       "enabled": true
     },
     {

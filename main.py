@@ -405,7 +405,8 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                         debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Loaded {len(rules_data.get('rules', []))} rules from GCS")
                         
                         # Process all rules from GCS
-                        all_matches = []
+                        course_bearings = []
+                        distances = []
                         monuments = {}
                         references = {}
                         
@@ -426,20 +427,9 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                                     debug_log(f"  Match {i+1}: '{match.group(0)}' at span {match.start()}-{match.end()}")
                             
                             if rule.get('type') == 'course':
-                                # Process bearing rules - extract distance directly from regex
+                                # Process bearing rules
                                 for match in matches:
                                     groups = match.groups()
-                                    
-                                    # Extract distance from the bearing regex itself
-                                    distance_value = None
-                                    if rule_map.get('distance') and len(groups) >= rule_map.get('distance'):
-                                        distance_str = groups[rule_map.get('distance') - 1]
-                                        if distance_str:
-                                            try:
-                                                distance_value = float(distance_str)
-                                            except ValueError:
-                                                distance_value = None
-                                    
                                     bearing = {
                                         'type': 'course',
                                         'span': {'start': match.start(), 'end': match.end()},
@@ -448,15 +438,25 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                                         'degrees': int(groups[rule_map.get('degrees', 2) - 1]) if rule_map.get('degrees') and groups[rule_map.get('degrees', 2) - 1] else 0,
                                         'minutes': int(groups[rule_map.get('minutes', 3) - 1]) if rule_map.get('minutes') and groups[rule_map.get('minutes', 3) - 1] else 0,
                                         'seconds': int(float(groups[rule_map.get('seconds', 4) - 1])) if rule_map.get('seconds') and groups[rule_map.get('seconds', 4) - 1] else 0,
-                                        'distance': distance_value,
                                         'original_text': match.group(0),
                                         'reference': None,
                                         'rule_id': rule.get('extractor_id')
                                     }
+                                    course_bearings.append(bearing)
                                     
-                                    # Only add bearings that have distances
+                            elif rule.get('type') == 'distance':
+                                # Process distance rules
+                                for match in matches:
+                                    groups = match.groups()
+                                    distance_value = groups[rule_map.get('distance', 1) - 1] if rule_map.get('distance') else None
                                     if distance_value:
-                                        all_matches.append(bearing)
+                                        distance_obj = {
+                                            'span': {'start': match.start(), 'end': match.end()},
+                                            'value': float(distance_value),
+                                            'original_text': match.group(0),
+                                            'used': False
+                                        }
+                                        distances.append(distance_obj)
                                         
                             elif rule.get('type') == 'monument':
                                 # Process monument rules
@@ -482,40 +482,57 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                                     }
                                     references[match.start()] = ref_segment
                         
-                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Found {len(all_matches)} total bearing matches before deduplication")
+                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Found {len(course_bearings)} course bearings, {len(distances)} distances")
                         
-                        # Deduplicate overlapping matches by span position
+                        # Deduplicate overlapping bearings by span position
                         def spans_overlap(span1, span2):
                             """Check if two spans overlap"""
                             return not (span1['end'] <= span2['start'] or span2['end'] <= span1['start'])
                         
                         deduplicated_bearings = []
-                        for bearing in all_matches:
+                        for bearing in course_bearings:
                             # Check if this bearing overlaps with any already added bearing
                             overlaps = False
                             for existing in deduplicated_bearings:
                                 if spans_overlap(bearing['span'], existing['span']):
                                     overlaps = True
-                                    debug_log(f"🔍 DEBUG: Skipping overlapping match from {bearing['rule_id']}: '{bearing['original_text'][:50]}...'")
+                                    debug_log(f"🔍 DEBUG: Skipping overlapping bearing from {bearing['rule_id']}: '{bearing['original_text'][:50]}...'")
                                     break
                             
                             if not overlaps:
-                                bearing['idx'] = len(deduplicated_bearings) + 1
                                 deduplicated_bearings.append(bearing)
                         
                         debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: After deduplication: {len(deduplicated_bearings)} unique bearings")
                         
-                        # Add monuments and references to bearings
-                        for bearing in deduplicated_bearings:
-                            # Find closest monument and reference
-                            if monuments:
-                                bearing['monument'] = list(monuments.values())[0]  # Use first monument found
-                            if references:
-                                bearing['reference'] = list(references.values())[0]  # Use first reference found
+                        # Match bearings with distances using span-based proximity
+                        MAX_GAP = 80  # chars, tune later
+                        
+                        for b in deduplicated_bearings:
+                            # Find candidate distances that come after this bearing within MAX_GAP
+                            candidates = [d for d in distances
+                                        if d["span"]["start"] >= b["span"]["end"]
+                                        and d["span"]["start"] - b["span"]["end"] <= MAX_GAP
+                                        and not d["used"]]
                             
-                            bearings.append(bearing)
+                            if candidates:
+                                # Use the nearest forward distance
+                                d = candidates[0]
+                                b['distance'] = d['value']
+                                d['used'] = True
+                                debug_log(f"🔍 DEBUG: Matched bearing '{b['original_text'][:30]}...' with distance {d['value']} (gap: {d['span']['start'] - b['span']['end']} chars)")
                                 
-                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Final bearings: {len(bearings)}")
+                                # Add monuments and references
+                                if monuments:
+                                    b['monument'] = list(monuments.values())[0]  # Use first monument found
+                                if references:
+                                    b['reference'] = list(references.values())[0]  # Use first reference found
+                                
+                                b['idx'] = len(bearings) + 1
+                                bearings.append(b)
+                            else:
+                                debug_log(f"🔍 DEBUG: No distance found for bearing '{b['original_text'][:30]}...'")
+                                
+                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Final bearings with distances: {len(bearings)}")
                     else:
                         if st.session_state.get('debug_enabled', False):
                             st.warning("🔍 DEBUG: Rules file not found in GCS, falling back to manual parsing")
