@@ -194,89 +194,11 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
     processing_start_time = time.time()
     
     try:
-        # Load prompt from external file with robust fallback
-        try:
-            with open('bearings_prompt.txt', 'r', encoding='utf-8') as f:
-                prompt_template = f.read().strip()
-        except (FileNotFoundError, IOError, PermissionError) as e:
-            if st.session_state.get('debug_enabled', False):
-                st.warning(f"🔄 DEBUG: bearings_prompt.txt file not accessible ({str(e)}). Using embedded fallback prompt.")
-            # Current working prompt as fallback (embedded for Cloud Run reliability)
-            prompt_template = """First classify the legal description type using these criteria:
-
-EXPLICIT_BEARINGS: Contains specific measurements like:
-- "N 45° 30' 15\" E 150.00 feet"
-- "North 71 degrees 53 minutes East 200 feet"
-- "S 73° 32' 01\" W 125.50 feet"
-- Any text with degrees, minutes, seconds AND distances
-
-ABSTRACT_BEARINGS: Contains directional descriptions without specific measurements:
-- "northerly along the creek line"
-- "following the existing fence line"
-- "along the property line of adjacent parcel"
-- "easterly along the right-of-way"
-
-EXTERNAL_REF: References external documents or survey systems:
-- "Lot 5, Block 3, Happy Valley Subdivision"
-- "as recorded in Plat Book 42, Page 15"
-- "Section 12, Township 5 North, Range 3 West"
-- "according to the plat thereof"
-
-Provide your analysis in this exact format:
-
-CLASSIFICATION: [explicit_bearings|abstract_bearings|external_ref]
-CONFIDENCE: [high|medium|low]
-REASONING: [explain why you chose this classification]
-EVIDENCE: [all of the specific text that supports your decision]
-RANK_ALTERNATIVES:
-- Second choice: [classification] (reason)
-- Third choice: [classification] (reason)
-
-Then extract data based on classification:
-
-If EXPLICIT_BEARINGS:
-
-then Extract all bearings, distances, and monuments from the following legal description text. 
-     For each line segment found, output in this exact format:
-            BEARING: [bearing]
-            DISTANCE: [distance]
-            MONUMENT: [monument/reference]
-
-            Ensure each attribute is on a new line.
-
-If ABSTRACT_BEARINGS:
-DESCRIPTION: [boundary description]
-REFERENCE: [reference points/lines]
-
-If EXTERNAL_REF:
-LOT: [lot number]
-BLOCK: [block number]
-SUBDIVISION: [subdivision name]
-PLAT_BOOK: [plat book reference]
-SECTION: [section/township/range if applicable]
-
-Text to analyze:"""
+        # Skip GPT processing - apply regex rules directly to raw OCR text
+        if st.session_state.get('debug_enabled', False):
+            st.write("🔍 DEBUG: Skipping GPT, applying regex rules directly to OCR text")
         
-        prompt = prompt_template + "\n" + text
-        
-        # Original hardcoded prompt (commented out for reference)
-        # prompt = """Extract all bearings, distances, and monuments from the following legal description text. 
-        # For each line segment found, output in this exact format:
-        # BEARING: [bearing]
-        # DISTANCE: [distance]
-        # MONUMENT: [monument/reference]
-        #
-        # Ensure each attribute is on a new line.
-        # Text to analyze:
-        # """ + text
-
-        response = client.chat.completions.create(
-            model="ft:gpt-3.5-turbo-0125:personal:ldr:BEoe3v67",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1
-        )
-
-        result_text = response.choices[0].message.content
+        result_text = text  # Use raw OCR text directly
         
         # Parse reasoning data - will add filename first at the end
         reasoning_data = {
@@ -442,9 +364,9 @@ Text to analyze:"""
                 from utils.gcs_storage import get_gcs_client
                 import json
                 
-                client = get_gcs_client()
-                if client:
-                    bucket = client.bucket('ldr-ai')
+                gcs_client = get_gcs_client()
+                if gcs_client:
+                    bucket = gcs_client.bucket('ldr-ai')
                     blob = bucket.blob('rules/current.json')
                     
                     if blob.exists():
@@ -458,6 +380,7 @@ Text to analyze:"""
                         course_bearings = []
                         distances = {}
                         monuments = {}
+                        references = {}
                         
                         for rule in rules_data.get('rules', []):
                             if not rule.get('enabled'):
@@ -475,12 +398,16 @@ Text to analyze:"""
                                 for match in matches:
                                     groups = match.groups()
                                     bearing = {
+                                        'type': 'course',
+                                        'idx': len(course_bearings) + 1,
+                                        'span': {'start': match.start(), 'end': match.end()},
                                         'cardinal_ns': groups[rule_map.get('cardinal_ns', 1) - 1] if rule_map.get('cardinal_ns') else None,
                                         'cardinal_ew': groups[rule_map.get('cardinal_ew', 5) - 1] if rule_map.get('cardinal_ew') else None,
                                         'degrees': int(groups[rule_map.get('degrees', 2) - 1]) if rule_map.get('degrees') and groups[rule_map.get('degrees', 2) - 1] else 0,
                                         'minutes': int(groups[rule_map.get('minutes', 3) - 1]) if rule_map.get('minutes') and groups[rule_map.get('minutes', 3) - 1] else 0,
                                         'seconds': int(float(groups[rule_map.get('seconds', 4) - 1])) if rule_map.get('seconds') and groups[rule_map.get('seconds', 4) - 1] else 0,
-                                        'original_text': match.group(0)
+                                        'original_text': match.group(0),
+                                        'reference': None
                                     }
                                     course_bearings.append(bearing)
                                     
@@ -499,14 +426,32 @@ Text to analyze:"""
                                     monument_value = groups[rule_map.get('monument', 1) - 1] if rule_map.get('monument') else None
                                     if monument_value:
                                         monuments[match.start()] = monument_value.strip()
+                                        
+                            elif rule.get('type') == 'ref_segment':
+                                # Process reference segment rules
+                                for match in matches:
+                                    idx = len(references) + 1
+                                    ref_segment = {
+                                        'type': 'ref_segment',
+                                        'idx': idx,
+                                        'span': {'start': match.start(), 'end': match.end()},
+                                        'ref': {
+                                            'kind': rule_map.get('kind', 'unknown'),
+                                            'name': match.group('name').strip() if 'name' in match.groupdict() else None,
+                                            'side': match.group('side').lower() if 'side' in match.groupdict() else None
+                                        }
+                                    }
+                                    references[match.start()] = ref_segment
                         
-                        # Combine bearings with distances and monuments
+                        # Combine bearings with distances, monuments, and references
                         for bearing in course_bearings:
-                            # Find closest distance and monument
+                            # Find closest distance, monument, and reference
                             if distances:
                                 bearing['distance'] = list(distances.values())[0]  # Use first distance found
                             if monuments:
                                 bearing['monument'] = list(monuments.values())[0]  # Use first monument found
+                            if references:
+                                bearing['reference'] = list(references.values())[0]  # Use first reference found
                             
                             if bearing.get('distance'):
                                 bearings.append(bearing)

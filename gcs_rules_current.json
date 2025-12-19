@@ -65,6 +65,18 @@
       "enabled": true
     },
     {
+      "extractor_id": "ref_segment",
+      "type": "ref_segment",
+      "regex": "(?i)along\\s+the\\s+(?P<side>northerly|southerly|easterly|westerly)\\s+right[-\\s]?of[-\\s]?way\\s+line\\s+of\\s+(?P<name>[A-Za-z0-9 .'-]+)",
+      "map": {
+        "kind": "row_line",
+        "name": "name",
+        "side": "side"
+      },
+      "description": "Reference segments like right-of-way lines",
+      "enabled": true
+    },
+    {
       "extractor_id": "json_section",
       "type": "reference",
       "regex": "JSON:\\s*(\\{.*\\})",

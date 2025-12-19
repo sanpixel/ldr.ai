@@ -20,6 +20,7 @@ class RuleType(Enum):
     DISTANCE = "distance"
     MONUMENT = "monument"
     REFERENCE = "reference"
+    REF_SEGMENT = "ref_segment"
 
 
 @dataclass
