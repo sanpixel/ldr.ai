@@ -188,6 +188,36 @@ def format_bearing_concise(bearing_desc):
         return bearing_desc  # Return original if parsing fails
     return bearing_desc
 
+def debug_log(message):
+    """Log debug message to both Streamlit and GCS."""
+    if st.session_state.get('debug_enabled', False):
+        st.write(message)
+        
+        # Also log to GCS
+        try:
+            from utils.gcs_storage import get_gcs_client
+            from datetime import datetime
+            
+            gcs_client = get_gcs_client()
+            if gcs_client:
+                bucket = gcs_client.bucket('ldr-ai')
+                blob = bucket.blob('debug/extraction-log.txt')
+                
+                timestamp = datetime.now().isoformat()
+                log_entry = f"{timestamp}: {message}\n"
+                
+                # Append to existing log
+                try:
+                    existing_content = blob.download_as_text()
+                    new_content = existing_content + log_entry
+                except:
+                    new_content = log_entry
+                
+                blob.upload_from_string(new_content, content_type='text/plain')
+        except Exception as e:
+            # Don't fail if GCS logging fails
+            pass
+
 def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_count=None):
     """Main extraction function that returns normalized SchemaOutput."""
     import time
@@ -195,9 +225,8 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
     
     try:
         # Skip GPT processing - apply regex rules directly to raw OCR text
-        if st.session_state.get('debug_enabled', False):
-            st.write("🔍 DEBUG [extract_bearings_with_gpt]: Skipping GPT, applying regex rules directly to OCR text")
-            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: OCR Text Input: {text[:500]}{'...' if len(text) > 500 else ''}")
+        debug_log("🔍 DEBUG [extract_bearings_with_gpt]: Skipping GPT, applying regex rules directly to OCR text")
+        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: OCR Text Input: {text}")
         
         result_text = text  # Use raw OCR text directly
         
@@ -357,8 +386,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         # Fallback to text parsing if JSON not found or failed
         if not bearings:
             # Load rules from GCS using working storage system
-            if st.session_state.get('debug_enabled', False):
-                st.write("🔍 DEBUG [extract_bearings_with_gpt]: Loading rules from GCS for text parsing")
+            debug_log("🔍 DEBUG [extract_bearings_with_gpt]: Loading rules from GCS for text parsing")
             
             try:
                 # Use working GCS storage to download rules
@@ -374,12 +402,10 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                         rules_json = blob.download_as_text()
                         rules_data = json.loads(rules_json)
                         
-                        if st.session_state.get('debug_enabled', False):
-                            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Loaded {len(rules_data.get('rules', []))} rules from GCS")
+                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Loaded {len(rules_data.get('rules', []))} rules from GCS")
                         
                         # Process all rules from GCS
-                        course_bearings = []
-                        distances = {}
+                        all_matches = []
                         monuments = {}
                         references = {}
                         
@@ -394,37 +420,43 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                             matches = list(re.finditer(pattern, result_text, re.IGNORECASE))
                             rule_map = rule.get('map', {})
                             
-                            if st.session_state.get('debug_enabled', False):
-                                st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Rule '{rule.get('extractor_id')}' ({rule.get('type')}) found {len(matches)} matches")
-                                if matches:
-                                    for i, match in enumerate(matches[:3]):  # Show first 3 matches
-                                        st.write(f"  Match {i+1}: '{match.group(0)}' at span {match.start()}-{match.end()}")
+                            debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Rule '{rule.get('extractor_id')}' ({rule.get('type')}) found {len(matches)} matches")
+                            if matches:
+                                for i, match in enumerate(matches[:3]):  # Show first 3 matches
+                                    debug_log(f"  Match {i+1}: '{match.group(0)}' at span {match.start()}-{match.end()}")
                             
                             if rule.get('type') == 'course':
-                                # Process bearing rules
+                                # Process bearing rules - extract distance directly from regex
                                 for match in matches:
                                     groups = match.groups()
+                                    
+                                    # Extract distance from the bearing regex itself
+                                    distance_value = None
+                                    if rule_map.get('distance') and len(groups) >= rule_map.get('distance'):
+                                        distance_str = groups[rule_map.get('distance') - 1]
+                                        if distance_str:
+                                            try:
+                                                distance_value = float(distance_str)
+                                            except ValueError:
+                                                distance_value = None
+                                    
                                     bearing = {
                                         'type': 'course',
-                                        'idx': len(course_bearings) + 1,
                                         'span': {'start': match.start(), 'end': match.end()},
                                         'cardinal_ns': groups[rule_map.get('cardinal_ns', 1) - 1] if rule_map.get('cardinal_ns') else None,
                                         'cardinal_ew': groups[rule_map.get('cardinal_ew', 5) - 1] if rule_map.get('cardinal_ew') else None,
                                         'degrees': int(groups[rule_map.get('degrees', 2) - 1]) if rule_map.get('degrees') and groups[rule_map.get('degrees', 2) - 1] else 0,
                                         'minutes': int(groups[rule_map.get('minutes', 3) - 1]) if rule_map.get('minutes') and groups[rule_map.get('minutes', 3) - 1] else 0,
                                         'seconds': int(float(groups[rule_map.get('seconds', 4) - 1])) if rule_map.get('seconds') and groups[rule_map.get('seconds', 4) - 1] else 0,
+                                        'distance': distance_value,
                                         'original_text': match.group(0),
-                                        'reference': None
+                                        'reference': None,
+                                        'rule_id': rule.get('extractor_id')
                                     }
-                                    course_bearings.append(bearing)
                                     
-                            elif rule.get('type') == 'distance':
-                                # Process distance rules
-                                for match in matches:
-                                    groups = match.groups()
-                                    distance_value = groups[rule_map.get('distance', 1) - 1] if rule_map.get('distance') else None
+                                    # Only add bearings that have distances
                                     if distance_value:
-                                        distances[match.start()] = float(distance_value)
+                                        all_matches.append(bearing)
                                         
                             elif rule.get('type') == 'monument':
                                 # Process monument rules
@@ -450,24 +482,40 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                                     }
                                     references[match.start()] = ref_segment
                         
-                        # Combine bearings with distances, monuments, and references
-                        if st.session_state.get('debug_enabled', False):
-                            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Found {len(course_bearings)} course bearings, {len(distances)} distances, {len(monuments)} monuments, {len(references)} references")
+                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Found {len(all_matches)} total bearing matches before deduplication")
                         
-                        for bearing in course_bearings:
-                            # Find closest distance, monument, and reference
-                            if distances:
-                                bearing['distance'] = list(distances.values())[0]  # Use first distance found
+                        # Deduplicate overlapping matches by span position
+                        def spans_overlap(span1, span2):
+                            """Check if two spans overlap"""
+                            return not (span1['end'] <= span2['start'] or span2['end'] <= span1['start'])
+                        
+                        deduplicated_bearings = []
+                        for bearing in all_matches:
+                            # Check if this bearing overlaps with any already added bearing
+                            overlaps = False
+                            for existing in deduplicated_bearings:
+                                if spans_overlap(bearing['span'], existing['span']):
+                                    overlaps = True
+                                    debug_log(f"🔍 DEBUG: Skipping overlapping match from {bearing['rule_id']}: '{bearing['original_text'][:50]}...'")
+                                    break
+                            
+                            if not overlaps:
+                                bearing['idx'] = len(deduplicated_bearings) + 1
+                                deduplicated_bearings.append(bearing)
+                        
+                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: After deduplication: {len(deduplicated_bearings)} unique bearings")
+                        
+                        # Add monuments and references to bearings
+                        for bearing in deduplicated_bearings:
+                            # Find closest monument and reference
                             if monuments:
                                 bearing['monument'] = list(monuments.values())[0]  # Use first monument found
                             if references:
                                 bearing['reference'] = list(references.values())[0]  # Use first reference found
                             
-                            if bearing.get('distance'):
-                                bearings.append(bearing)
+                            bearings.append(bearing)
                                 
-                        if st.session_state.get('debug_enabled', False):
-                            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Final bearings with distances: {len(bearings)}")
+                        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Final bearings: {len(bearings)}")
                     else:
                         if st.session_state.get('debug_enabled', False):
                             st.warning("🔍 DEBUG: Rules file not found in GCS, falling back to manual parsing")
@@ -588,8 +636,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         # Convert to normalized schema
         from utils.schema import SchemaOutput, LineData, BucketClassification
         
-        if st.session_state.get('debug_enabled', False):
-            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Converting {len(parsed_bearings)} bearings to normalized schema")
+        debug_log(f"🔍 DEBUG [extract_bearings_with_gpt]: Converting {len(parsed_bearings)} bearings to normalized schema")
         
         # Convert legacy bearings to LineData
         lines = []
@@ -1427,7 +1474,7 @@ def process_image(uploaded_file):
                 supplemental_info = extract_supplemental_info_with_gpt(extracted_text)
                 if supplemental_info:
                     st.session_state.supplemental_info = supplemental_info
-                    st.success("Successfully extracted property information")
+                    st.success("[process_image] Successfully extracted property information")
             except Exception as e:
                 st.error(f"Error extracting property information: {str(e)}")
         
@@ -1443,15 +1490,15 @@ def process_image(uploaded_file):
                 result_text = f"Schema output: {schema_output.bucket}"
                 # Count bearings in response text
                 total_in_response = len([line for line in result_text.split('\n') if line.strip().upper().startswith('BEARING:')])
-                st.info(f"Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
+                st.info(f"[process_image] Parsed {len(bearings)} bearings (GPT returned {total_in_response} in response)")
                 
                 st.session_state.gpt_response = result_text
                 
                 if bearings:
-                    st.success(f"✅ Successfully extracted {len(bearings)} bearings!")
+                    st.success(f"[process_image] ✅ Successfully extracted {len(bearings)} bearings!")
                     return bearings, schema_output
                 else:
-                    st.warning("No bearings found")
+                    st.warning("[process_image] No bearings found")
                     return [], schema_output
             except Exception as e:
                 from utils.schema import create_empty_schema
@@ -2253,7 +2300,7 @@ def main():
                 pass  # Silently ignore preview errors
             
             if st.button("Process PDF", type="primary"):
-                st.info("🔄 Processing file...")
+                st.info("🔄 [main] Processing file...")
                 # Route to appropriate processor based on file type
                 filename = getattr(uploaded_file, 'name', '').lower()
                 if filename.endswith(('.jpg', '.jpeg')):
