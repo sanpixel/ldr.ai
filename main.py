@@ -196,7 +196,8 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
     try:
         # Skip GPT processing - apply regex rules directly to raw OCR text
         if st.session_state.get('debug_enabled', False):
-            st.write("🔍 DEBUG: Skipping GPT, applying regex rules directly to OCR text")
+            st.write("🔍 DEBUG [extract_bearings_with_gpt]: Skipping GPT, applying regex rules directly to OCR text")
+            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: OCR Text Input: {text[:500]}{'...' if len(text) > 500 else ''}")
         
         result_text = text  # Use raw OCR text directly
         
@@ -357,7 +358,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         if not bearings:
             # Load rules from GCS using working storage system
             if st.session_state.get('debug_enabled', False):
-                st.write("🔍 DEBUG: Loading rules from GCS for text parsing")
+                st.write("🔍 DEBUG [extract_bearings_with_gpt]: Loading rules from GCS for text parsing")
             
             try:
                 # Use working GCS storage to download rules
@@ -374,7 +375,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                         rules_data = json.loads(rules_json)
                         
                         if st.session_state.get('debug_enabled', False):
-                            st.write(f"🔍 DEBUG: Loaded {len(rules_data.get('rules', []))} rules from GCS")
+                            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Loaded {len(rules_data.get('rules', []))} rules from GCS")
                         
                         # Process all rules from GCS
                         course_bearings = []
@@ -390,8 +391,14 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                             if not pattern:
                                 continue
                                 
-                            matches = re.finditer(pattern, result_text, re.IGNORECASE)
+                            matches = list(re.finditer(pattern, result_text, re.IGNORECASE))
                             rule_map = rule.get('map', {})
+                            
+                            if st.session_state.get('debug_enabled', False):
+                                st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Rule '{rule.get('extractor_id')}' ({rule.get('type')}) found {len(matches)} matches")
+                                if matches:
+                                    for i, match in enumerate(matches[:3]):  # Show first 3 matches
+                                        st.write(f"  Match {i+1}: '{match.group(0)}' at span {match.start()}-{match.end()}")
                             
                             if rule.get('type') == 'course':
                                 # Process bearing rules
@@ -444,6 +451,9 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                                     references[match.start()] = ref_segment
                         
                         # Combine bearings with distances, monuments, and references
+                        if st.session_state.get('debug_enabled', False):
+                            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Found {len(course_bearings)} course bearings, {len(distances)} distances, {len(monuments)} monuments, {len(references)} references")
+                        
                         for bearing in course_bearings:
                             # Find closest distance, monument, and reference
                             if distances:
@@ -455,6 +465,9 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
                             
                             if bearing.get('distance'):
                                 bearings.append(bearing)
+                                
+                        if st.session_state.get('debug_enabled', False):
+                            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Final bearings with distances: {len(bearings)}")
                     else:
                         if st.session_state.get('debug_enabled', False):
                             st.warning("🔍 DEBUG: Rules file not found in GCS, falling back to manual parsing")
@@ -576,7 +589,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
         from utils.schema import SchemaOutput, LineData, BucketClassification
         
         if st.session_state.get('debug_enabled', False):
-            st.write(f"🔍 DEBUG: Converting {len(parsed_bearings)} bearings to normalized schema")
+            st.write(f"🔍 DEBUG [extract_bearings_with_gpt]: Converting {len(parsed_bearings)} bearings to normalized schema")
         
         # Convert legacy bearings to LineData
         lines = []
@@ -620,7 +633,7 @@ def extract_bearings_with_gpt(text, filename, user_email, file_size=None, page_c
 def convert_schema_to_legacy_bearings(schema_output):
     """Convert SchemaOutput to legacy bearing format for existing UI code."""
     if st.session_state.get('debug_enabled', False):
-        st.write(f"🔍 DEBUG: Converting schema to legacy format - {len(schema_output.lines)} lines")
+        st.write(f"🔍 DEBUG [convert_schema_to_legacy_bearings]: Converting schema to legacy format - {len(schema_output.lines)} lines")
     
     legacy_bearings = []
     for line in schema_output.lines:
