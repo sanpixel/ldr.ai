@@ -3071,7 +3071,7 @@ def main():
                     (async () => {{
                         try {{
                             // Add mobile-specific headers and error handling
-                            const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                            const printResponse = await fetch('https://ldr-print.clocknumbers.com/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
@@ -3203,7 +3203,7 @@ def main():
                     (async () => {{
                         try {{
                             // Add mobile-specific headers and error handling
-                            const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                            const printResponse = await fetch('https://ldr-print.clocknumbers.com/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
