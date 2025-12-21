@@ -79,7 +79,7 @@ def setup_logging(log_level: str):
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -204,7 +204,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message=f"Unsupported format: {document.format}",
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
     
     def print_pdf(self, pdf_data: bytes, filename: str = "document.pdf") -> PrintResult:
@@ -214,7 +214,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message="No default printer available",
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
         
         if not WINDOWS_PRINTING:
@@ -222,7 +222,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message="Windows printing not available",
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
         
         try:
@@ -247,7 +247,7 @@ class PrintManager:
                     success=True,
                     job_id=job_id,
                     error_message=None,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
             finally:
                 win32print.ClosePrinter(printer_handle)
@@ -258,7 +258,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message=str(e),
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
     
     def print_text(self, text_content: str, filename: str = "document.txt") -> PrintResult:
@@ -268,7 +268,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message="No default printer available",
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
         
         if not WINDOWS_PRINTING:
@@ -276,7 +276,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message="Windows printing not available",
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
         
         try:
@@ -301,7 +301,7 @@ class PrintManager:
                 success=True,
                 job_id=None,
                 error_message=None,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             
         except Exception as e:
@@ -310,7 +310,7 @@ class PrintManager:
                 success=False,
                 job_id=None,
                 error_message=str(e),
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
 
@@ -329,7 +329,7 @@ def require_api_key(f):
             return jsonify({
                 'status': 'error',
                 'error': 'Missing API key',
-                'timestamp': datetime.utcnow().isoformat() + 'Z'
+                'timestamp': datetime.now(timezone.utc).isoformat() + 'Z'
             }), 401
         
         if api_key != config.API_KEY:
@@ -337,7 +337,7 @@ def require_api_key(f):
             return jsonify({
                 'status': 'error',
                 'error': 'Invalid API key',
-                'timestamp': datetime.utcnow().isoformat() + 'Z'
+                'timestamp': datetime.now(timezone.utc).isoformat() + 'Z'
             }), 403
         
         logging.info(f"Authentication successful from {request.remote_addr}")
@@ -362,7 +362,7 @@ def health():
     """Health check endpoint - no authentication required."""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat() + 'Z'
+        'timestamp': datetime.now(timezone.utc).isoformat() + 'Z'
     }), 200
 
 
@@ -411,14 +411,14 @@ def print_endpoint():
         return jsonify({
             'status': 'error',
             'error': str(e),
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
+            'timestamp': datetime.now(timezone.utc).isoformat() + 'Z'
         }), 400
     except Exception as e:
         logging.error(f"Error processing request from {request.remote_addr}: {str(e)}")
         return jsonify({
             'status': 'error',
             'error': 'Internal server error',
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
+            'timestamp': datetime.now(timezone.utc).isoformat() + 'Z'
         }), 500
 
 

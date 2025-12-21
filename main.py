@@ -2988,27 +2988,29 @@ def main():
         # Show PDF report from GCS
         report_url = st.session_state.get('report_url')
         if report_url:
-            try:
-                import requests
-                from pdf2image import convert_from_bytes
-                
-                # Download PDF report from GCS
-                response = requests.get(report_url)
-                if response.status_code == 200:
-                    # Convert PDF to image for display
-                    images = convert_from_bytes(response.content, first_page=1, last_page=1, dpi=150)
-                    if images:
-                        filename = st.session_state.get('filename', 'Survey Report')
-                        st.image(images[0], caption=f"📊 {filename} - Survey Report", use_container_width=True)
-                    else:
-                        st.error("Failed to convert PDF to image - no images returned")
-                        st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
-                else:
-                    st.error(f"Failed to download PDF report - HTTP {response.status_code}")
-                    st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f"Failed to display PDF report: {str(e)}")
-                st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
+            # Always show iframe
+            st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
+            
+            # Debug info
+            if st.session_state.get('debug_enabled', False):
+                try:
+                    import requests
+                    from pdf2image import convert_from_bytes
+                    
+                    st.write(f"DEBUG report_url: {report_url}")
+                    
+                    # Download PDF report from GCS
+                    response = requests.get(report_url)
+                    
+                    st.write(f"DEBUG response status: {response.status_code}")
+                    st.write(f"DEBUG response size: {len(response.content)} bytes")
+                    
+                    if response.status_code == 200:
+                        # Convert PDF to image for display
+                        images = convert_from_bytes(response.content, first_page=1, last_page=1, dpi=150)
+                        st.write(f"DEBUG images count: {len(images) if images else 0}")
+                except Exception as e:
+                    st.write(f"DEBUG exception: {str(e)}")
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
@@ -3047,6 +3049,16 @@ def main():
         if st.session_state.get('supplemental_response'):
             with st.expander("Debug: Full Supplemental Info Response"):
                 st.text(st.session_state.supplemental_response)
+        
+        # Debug: pdf_image type for combined print
+        if st.session_state.get('debug_enabled', False):
+            with st.expander("Debug: pdf_image Info"):
+                st.write(f"pdf_image type: {type(pdf_image)}")
+                st.write(f"pdf_image is string: {isinstance(pdf_image, str)}")
+                if isinstance(pdf_image, str):
+                    st.write(f"pdf_image value: {pdf_image[:200]}")
+                else:
+                    st.write(f"pdf_image length: {len(pdf_image) if hasattr(pdf_image, '__len__') else 'N/A'}")
         
         # Add print buttons
         col1, col2 = st.columns(2)
