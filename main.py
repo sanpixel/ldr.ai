@@ -2988,29 +2988,37 @@ def main():
         # Show PDF report from GCS
         report_url = st.session_state.get('report_url')
         if report_url:
-            # Always show iframe
-            st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
-            
-            # Debug info
-            if st.session_state.get('debug_enabled', False):
-                try:
-                    import requests
-                    from pdf2image import convert_from_bytes
-                    
+            try:
+                import requests
+                from pdf2image import convert_from_bytes
+                
+                # Debug info
+                if st.session_state.get('debug_enabled', False):
                     st.write(f"DEBUG report_url: {report_url}")
-                    
-                    # Download PDF report from GCS
-                    response = requests.get(report_url)
-                    
+                
+                # Download PDF report from GCS
+                response = requests.get(report_url)
+                
+                if st.session_state.get('debug_enabled', False):
                     st.write(f"DEBUG response status: {response.status_code}")
                     st.write(f"DEBUG response size: {len(response.content)} bytes")
+                
+                if response.status_code == 200:
+                    # Convert PDF to image for display
+                    images = convert_from_bytes(response.content, first_page=1, last_page=1, dpi=150)
                     
-                    if response.status_code == 200:
-                        # Convert PDF to image for display
-                        images = convert_from_bytes(response.content, first_page=1, last_page=1, dpi=150)
+                    if st.session_state.get('debug_enabled', False):
                         st.write(f"DEBUG images count: {len(images) if images else 0}")
-                except Exception as e:
+                    
+                    if images:
+                        filename = st.session_state.get('filename', 'Survey Report')
+                        st.image(images[0], caption=f"📊 {filename} - Survey Report", use_container_width=True)
+            except Exception as e:
+                if st.session_state.get('debug_enabled', False):
                     st.write(f"DEBUG exception: {str(e)}")
+            
+            # Button to open PDF report
+            st.link_button("📄 Open Full PDF Report", report_url)
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
