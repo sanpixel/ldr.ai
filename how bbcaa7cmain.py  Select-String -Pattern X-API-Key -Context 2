@@ -1,0 +1,291 @@
+[1mdiff --git a/main.py b/main.py[m
+[1mindex a2841e2..580246e 100644[m
+[1m--- a/main.py[m
+[1m+++ b/main.py[m
+[36m@@ -1076,7 +1076,7 @@[m [mdef highlight_supplemental_info_on_image(image_bytes, supplemental_info):[m
+                                     ocr_data['width'].append(w)[m
+                                     ocr_data['height'].append(h)[m
+             except Exception as e:[m
+[31m-                pass  # Silently fall back to pytesseract[m
+[32m+[m[32m                st.warning(f"Vision API failed: {str(e)}, falling back to Pytesseract")[m
+         [m
+         # Fallback to pytesseract if Vision didn't work[m
+         if not ocr_data:[m
+[36m@@ -1277,6 +1277,8 @@[m [mdef process_image(uploaded_file):[m
+         [m
+         # Extract text using OCR (same as PDF)[m
+         extracted_text = ""[m
+[32m+[m[32m        ocr_method = ""[m
+[32m+[m[41m        [m
+         # Try Vision API first if key is available (same pattern as Google Drive API)[m
+         if os.environ.get('GOOGLE_VISION_API_KEY'):[m
+             try:[m
+[36m@@ -1302,17 +1304,24 @@[m [mdef process_image(uploaded_file):[m
+                         text_annotations = result['responses'][0].get('textAnnotations', [])[m
+                         if text_annotations:[m
+                             extracted_text = text_annotations[0].get('description', '')[m
+[32m+[m[32m                            ocr_method = "Google Vision API"[m
+             except Exception as e:[m
+[31m-                pass  # Silently fall back to pytesseract[m
+[32m+[m[32m                st.warning(f"Vision API failed: {str(e)}, falling back to Pytesseract")[m
+         [m
+         # Fallback to pytesseract if Vision didn't work[m
+         if not extracted_text:[m
+             extracted_text = pytesseract.image_to_string(image)[m
+[32m+[m[32m            ocr_method = "Pytesseract"[m
+         [m
+[31m-        # Store extracted text in session state (same as PDF)[m
+[32m+[m[32m        # Store OCR method and extracted text in session state[m
+[32m+[m[32m        st.session_state.ocr_method = ocr_method[m
+         st.session_state.extracted_text = extracted_text[m
+         st.session_state.processing_messages = [][m
+         [m
+[32m+[m[32m        # Show OCR method notification[m
+[32m+[m[32m        if ocr_method:[m
+[32m+[m[32m            st.info(f"📄 OCR: {ocr_method}")[m
+[32m+[m[41m        [m
+         # Extract supplemental information first (same as PDF)[m
+         if get_openai_key():[m
+             try:[m
+[36m@@ -1400,8 +1409,12 @@[m [mdef process_pdf(uploaded_file):[m
+ [m
+         # Extract text from each page[m
+         extracted_text = ""[m
+[32m+[m[32m        ocr_method = ""[m
+[32m+[m[41m        [m
+         for i, image in enumerate(images):[m
+             text = ""[m
+[32m+[m[32m            page_ocr_method = ""[m
+[32m+[m[41m            [m
+             # Try Vision API first if key is available (same pattern as Google Drive API)[m
+             if os.environ.get('GOOGLE_VISION_API_KEY'):[m
+                 try:[m
+[36m@@ -1427,20 +1440,31 @@[m [mdef process_pdf(uploaded_file):[m
+                             text_annotations = result['responses'][0].get('textAnnotations', [])[m
+                             if text_annotations:[m
+                                 text = text_annotations[0].get('description', '')[m
+[32m+[m[32m                                page_ocr_method = "Google Vision API"[m
+                 except Exception as e:[m
+[31m-                    pass  # Silently fall back to pytesseract[m
+[32m+[m[32m                    st.warning(f"Vision API failed: {str(e)}, falling back to Pytesseract")[m
+             [m
+             # Fallback to pytesseract if Vision didn't work[m
+             if not text:[m
+                 text = pytesseract.image_to_string(image)[m
+[32m+[m[32m                page_ocr_method = "Pytesseract"[m
+[32m+[m[41m            [m
+[32m+[m[32m            # Track OCR method (use first page's method)[m
+[32m+[m[32m            if i == 0:[m
+[32m+[m[32m                ocr_method = page_ocr_method[m
+             [m
+             extracted_text += f"\n--- Page {i+1} ---\n{text}\n"[m
+ [m
+         # Clean up temporary file[m
+         os.unlink(pdf_path)[m
+ [m
+[31m-        # Store extracted text in session state[m
+[32m+[m[32m        # Store extracted text and OCR method in session state[m
+         st.session_state.extracted_text = extracted_text[m
+[32m+[m[32m        st.session_state.ocr_method = ocr_method[m
+[32m+[m[41m        [m
+[32m+[m[32m        # Show OCR method notification[m
+[32m+[m[32m        if ocr_method:[m
+[32m+[m[32m            st.info(f"📄 OCR: {ocr_method}")[m
+         [m
+         # Store extracted text and processing info in session state for display outside[m
+         st.session_state.extracted_text = extracted_text[m
+[36m@@ -2092,7 +2116,7 @@[m [mdef main():[m
+             # Generate preview immediately on upload[m
+             filename = getattr(uploaded_file, 'name', '').lower()[m
+             try:[m
+[31m-                if filename.endswith(('.jpg', '.jpeg')):[m
+[32m+[m[32m                if filename.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp')):[m
+                     # Image preview[m
+                     image = PILImage.open(uploaded_file)[m
+                     # Upload image to GCS[m
+[36m@@ -2136,7 +2160,7 @@[m [mdef main():[m
+                 st.info("🔄 Processing file...")[m
+                 # Route to appropriate processor based on file type[m
+                 filename = getattr(uploaded_file, 'name', '').lower()[m
+[31m-                if filename.endswith(('.jpg', '.jpeg')):[m
+[32m+[m[32m                if filename.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp')):[m
+                     bearings = process_image(uploaded_file)[m
+                 else:[m
+                     bearings = process_pdf(uploaded_file)[m
+[36m@@ -2421,6 +2445,11 @@[m [mdef main():[m
+                                 [m
+                                 st.session_state.draw_lines_section_expanded = False[m
+                                 draw_lines_from_bearings()[m
+[32m+[m[41m                                [m
+[32m+[m[32m                                # Set report_url for images[m
+[32m+[m[32m                                filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0][m
+[32m+[m[32m                                st.session_state.report_url = f"https://storage.googleapis.com/ldr-ai/survey-report-{filename_base}.pdf"[m
+[32m+[m[41m                                [m
+                                 st.success(f"✅ Extracted {len(bearings)} bearings from photo!")[m
+                             else:[m
+                                 st.warning("⚠️ No bearings found in photo.")[m
+[36m@@ -2550,6 +2579,11 @@[m [mdef main():[m
+                                 [m
+                                 st.session_state.draw_lines_section_expanded = False[m
+                                 draw_lines_from_bearings()[m
+[32m+[m[41m                                [m
+[32m+[m[32m                                # Set report_url for images[m
+[32m+[m[32m                                filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0][m
+[32m+[m[32m                                st.session_state.report_url = f"https://storage.googleapis.com/ldr-ai/survey-report-{filename_base}.pdf"[m
+[32m+[m[41m                                [m
+                                 st.success(f"✅ Extracted {len(bearings)} bearings from photo!")[m
+                             else:[m
+                                 st.warning("⚠️ No bearings found in photo.")[m
+[36m@@ -3000,6 +3034,7 @@[m [mdef main():[m
+                     if images:[m
+                         filename = st.session_state.get('filename', 'Survey Report')[m
+                         st.image(images[0], caption=f"📊 {filename} - Survey Report", use_container_width=True)[m
+[32m+[m[32m                        st.write(f"Report URL: {report_url}")[m
+             except Exception as e:[m
+                 pass[m
+         [m
+[36m@@ -3033,6 +3068,16 @@[m [mdef main():[m
+             except Exception as e:[m
+                 st.write(f"Failed to load evidence from database: {str(e)}")[m
+         [m
+[32m+[m[32m        with st.expander("Debug: Print Request Info"):[m
+[32m+[m[32m            st.write("Print server URL:", "https://ldr-print.clocknumbers.com/print")[m
+[32m+[m[32m            st.write("API Key:", api_key if 'api_key' in locals() else "Not set")[m
+[32m+[m[32m            if 'pdf_b64' in locals():[m
+[32m+[m[32m                st.write("PDF base64 length:", len(pdf_b64))[m
+[32m+[m[32m                st.write("PDF base64 sample (first 100 chars):", pdf_b64[:100] + "..." if len(pdf_b64) > 100 else pdf_b64)[m
+[32m+[m[32m            else:[m
+[32m+[m[32m                st.write("No PDF data available")[m
+[32m+[m[32m            st.write("User Agent:", st.session_state.get('user_agent', 'Unknown'))[m
+[32m+[m[41m        [m
+         if st.session_state.get('parsed_bearings'):[m
+             with st.expander("Debug: Full Parsed Bearings Data"):[m
+                 st.json(st.session_state.parsed_bearings)[m
+[36m@@ -3070,28 +3115,41 @@[m [mdef main():[m
+                     js_code = f"""[m
+                     (async () => {{[m
+                         try {{[m
+[32m+[m[32m                            const requestData = {{[m
+[32m+[m[32m                                document: '{pdf_b64}',[m
+[32m+[m[32m                                format: 'pdf',[m
+[32m+[m[32m                                filename: 'highlighted_legal_description.pdf'[m
+[32m+[m[32m                            }};[m
+[32m+[m[41m                            [m
+[32m+[m[32m                            // Log request details for debugging[m
+[32m+[m[32m                            console.log('Print request data:', {{[m
+[32m+[m[32m                                documentLength: requestData.document.length,[m
+[32m+[m[32m                                format: requestData.format,[m
+[32m+[m[32m                                filename: requestData.filename,[m
+[32m+[m[32m                                userAgent: navigator.userAgent[m
+[32m+[m[32m                            }});[m
+[32m+[m[41m                            [m
+                             // Add mobile-specific headers and error handling[m
+                             const printResponse = await fetch('https://ldr-print.clocknumbers.com/print', {{[m
+                                 method: 'POST',[m
+                                 headers: {{[m
+                                     'Content-Type': 'application/json',[m
+                                     'Accept': 'application/json',[m
+[31m-                                    'X-API-Key': '{api_key}',[m
+[32m+[m[32m                                    'X-API-Key': 'my-custom-key',[m
+                                     'User-Agent': navigator.userAgent || 'Streamlit-Mobile'[m
+                                 }},[m
+[31m-                                body: JSON.stringify({{[m
+[31m-                                    document: '{pdf_b64}',[m
+[31m-                                    format: 'pdf',[m
+[31m-                                    filename: 'highlighted_legal_description.pdf'[m
+[31m-                                }}),[m
+[32m+[m[32m                                body: JSON.stringify(requestData),[m
+                                 mode: 'cors',[m
+                                 credentials: 'omit'[m
+                             }});[m
+                             [m
+                             if (printResponse.ok) {{[m
+[32m+[m[32m                                const responseData = await printResponse.json();[m
+[32m+[m[32m                                console.log('Print success:', responseData);[m
+                                 return 'success';[m
+                             }} else {{[m
+                                 const responseText = await printResponse.text();[m
+[32m+[m[32m                                console.log('Print error response:', responseText);[m
+                                 let errorMsg = 'HTTP ' + printResponse.status;[m
+                                 try {{[m
+                                     const errorJson = JSON.parse(responseText);[m
+[36m@@ -3102,12 +3160,14 @@[m [mdef main():[m
+                                 return 'error: ' + errorMsg;[m
+                             }}[m
+                         }} catch (error) {{[m
+[32m+[m[32m                            console.log('Print exception:', error);[m
+                             return 'error: ' + error.message + ' (network or CORS issue)';[m
+                         }}[m
+                     }})();[m
+                     """[m
+                     [m
+[31m-                    result = st_js(js_code, key="print_pdf_js")[m
+[32m+[m[32m                    import time[m
+[32m+[m[32m                    result = st_js(js_code, key=f"print_pdf_js_{int(time.time())}")[m
+                     [m
+                     if result:[m
+                         if result == 'success':[m
+[36m@@ -3202,28 +3262,41 @@[m [mdef main():[m
+                     js_code = f"""[m
+                     (async () => {{[m
+                         try {{[m
+[32m+[m[32m                            const requestData = {{[m
+[32m+[m[32m                                document: '{combined_b64}',[m
+[32m+[m[32m                                format: 'pdf',[m
+[32m+[m[32m                                filename: 'combined-highlighted-report.pdf'[m
+[32m+[m[32m                            }};[m
+[32m+[m[41m                            [m
+[32m+[m[32m                            // Log request details for debugging[m
+[32m+[m[32m                            console.log('Combined print request data:', {{[m
+[32m+[m[32m                                documentLength: requestData.document.length,[m
+[32m+[m[32m                                format: requestData.format,[m
+[32m+[m[32m                                filename: requestData.filename,[m
+[32m+[m[32m                                userAgent: navigator.userAgent[m
+[32m+[m[32m                            }});[m
+[32m+[m[41m                            [m
+                             // Add mobile-specific headers and error handling[m
+                             const printResponse = await fetch('https://ldr-print.clocknumbers.com/print', {{[m
+                                 method: 'POST',[m
+                                 headers: {{[m
+                                     'Content-Type': 'application/json',[m
+                                     'Accept': 'application/json',[m
+[31m-                                    'X-API-Key': '{api_key}',[m
+[32m+[m[32m                                    'X-API-Key': 'my-custom-key',[m
+                                     'User-Agent': navigator.userAgent || 'Streamlit-Mobile'[m
+                                 }},[m
+[31m-                                body: JSON.stringify({{[m
+[31m-                                    document: '{combined_b64}',[m
+[31m-                                    format: 'pdf',[m
+[31m-                                    filename: 'combined-highlighted-report.pdf'[m
+[31m-                                }}),[m
+[32m+[m[32m                                body: JSON.stringify(requestData),[m
+                                 mode: 'cors',[m
+                                 credentials: 'omit'[m
+                             }});[m
+                             [m
+                             if (printResponse.ok) {{[m
+[32m+[m[32m                                const responseData = await printResponse.json();[m
+[32m+[m[32m                                console.log('Combined print success:', responseData);[m
+                                 return 'success';[m
+                             }} else {{[m
+                                 const responseText = await printResponse.text();[m
+[32m+[m[32m                                console.log('Combined print error response:', responseText);[m
+                                 let errorMsg = 'HTTP ' + printResponse.status;[m
+                                 try {{[m
+                                     const errorJson = JSON.parse(responseText);[m
+[36m@@ -3234,12 +3307,14 @@[m [mdef main():[m
+                                 return 'error: ' + errorMsg;[m
+                             }}[m
+                         }} catch (error) {{[m
+[32m+[m[32m                            console.log('Combined print exception:', error);[m
+                             return 'error: ' + error.message + ' (network or CORS issue)';[m
+                         }}[m
+                     }})();[m
+                     """[m
+                     [m
+[31m-                    result = st_js(js_code, key="print_combined_js")[m
+[32m+[m[32m                    import time[m
+[32m+[m[32m                    result = st_js(js_code, key=f"print_combined_js_{int(time.time())}")[m
+                     [m
+                     if result:[m
+                         if result == 'success':[m

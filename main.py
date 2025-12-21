@@ -3000,8 +3000,15 @@ def main():
                     if images:
                         filename = st.session_state.get('filename', 'Survey Report')
                         st.image(images[0], caption=f"📊 {filename} - Survey Report", use_container_width=True)
+                    else:
+                        st.error("Failed to convert PDF to image - no images returned")
+                        st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
+                else:
+                    st.error(f"Failed to download PDF report - HTTP {response.status_code}")
+                    st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
             except Exception as e:
-                pass
+                st.error(f"Failed to display PDF report: {str(e)}")
+                st.markdown(f'<iframe src="{report_url}" width="100%" height="800px"></iframe>', unsafe_allow_html=True)
         
         # Debug: Show what we're trying to highlight
         with st.expander("Debug: Yellow Highlighting Info"):
@@ -3048,20 +3055,13 @@ def main():
             if st.button("🖨️ Print Highlighted PDF", key="print_highlighted_pdf"):
                 try:
                     from streamlit_js import st_js
-                    import base64
-                    import requests
                     
-                    # Fetch image server-side to avoid CORS issues
+                    # Get URL for highlighted PDF
                     if isinstance(pdf_image, str):
-                        # Fetch from URL
-                        img_response = requests.get(pdf_image)
-                        pdf_bytes = img_response.content
+                        pdf_url = pdf_image
                     else:
-                        # Already bytes
-                        pdf_bytes = pdf_image
-                    
-                    # Convert to base64
-                    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                        st.error("❌ Cannot print - no URL available for highlighted PDF")
+                        return
                     
                     # Get API key from environment
                     api_key = 'my-custom-key'
@@ -3080,7 +3080,7 @@ def main():
                                     'User-Agent': navigator.userAgent || 'Streamlit-Mobile'
                                 }},
                                 body: JSON.stringify({{
-                                    document: '{pdf_b64}',
+                                    url: '{pdf_url}',
                                     format: 'pdf',
                                     filename: 'highlighted_legal_description.pdf'
                                 }}),
@@ -3122,7 +3122,6 @@ def main():
             if st.button("🖨️ Print Combined (Highlighted + Report)", key="print_combined_pdf") or st.session_state.get('trigger_combined_print', False):
                 try:
                     from streamlit_js import st_js
-                    import base64
                     import requests
                     from PyPDF2 import PdfReader, PdfWriter
                     import io
@@ -3188,12 +3187,12 @@ def main():
                     filename_base = st.session_state.get('filename', 'unknown').rsplit('.', 1)[0]
                     combined_url = upload_pdf_file(combined_bytes, f"combined-{filename_base}.pdf")
                     
-                    if combined_url:
-                        st.success(f"✅ Combined PDF uploaded to GCS")
-                        st.session_state.combined_url = combined_url
+                    if not combined_url:
+                        st.error("❌ Failed to upload combined PDF to GCS")
+                        return
                     
-                    # Convert to base64 for printing
-                    combined_b64 = base64.b64encode(combined_bytes).decode('utf-8')
+                    st.success(f"✅ Combined PDF uploaded to GCS")
+                    st.session_state.combined_url = combined_url
                     
                     # Get API key from environment
                     api_key = 'my-custom-key'
@@ -3212,7 +3211,7 @@ def main():
                                     'User-Agent': navigator.userAgent || 'Streamlit-Mobile'
                                 }},
                                 body: JSON.stringify({{
-                                    document: '{combined_b64}',
+                                    url: '{combined_url}',
                                     format: 'pdf',
                                     filename: 'combined-highlighted-report.pdf'
                                 }}),

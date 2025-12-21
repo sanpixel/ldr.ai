@@ -9,6 +9,7 @@ import logging
 import secrets
 import base64
 import tempfile
+import requests
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
@@ -105,13 +106,11 @@ class DocumentHandler:
     def extract_document(request_data: dict) -> Document:
         """
         Extract document from request JSON.
+        Accepts either 'document' (base64) or 'url' field.
         Raises ValueError if document data is missing or invalid.
         """
         if not request_data:
             raise ValueError("Request body is empty")
-        
-        if 'document' not in request_data:
-            raise ValueError("Missing 'document' field in request")
         
         if 'format' not in request_data:
             raise ValueError("Missing 'format' field in request")
@@ -122,11 +121,30 @@ class DocumentHandler:
         if doc_format not in DocumentHandler.SUPPORTED_FORMATS:
             raise ValueError(f"Unsupported format: {doc_format}. Supported formats: {', '.join(DocumentHandler.SUPPORTED_FORMATS)}")
         
-        # Decode base64 document content
-        try:
-            doc_content = base64.b64decode(request_data['document'])
-        except Exception as e:
-            raise ValueError(f"Invalid base64 encoding: {str(e)}")
+        # Get document content - either from URL or base64
+        doc_content = None
+        
+        if 'url' in request_data:
+            # Download from URL
+            try:
+                url = request_data['url']
+                logging.info(f"Downloading document from URL: {url[:100]}...")
+                response = requests.get(url, timeout=60)
+                response.raise_for_status()
+                doc_content = response.content
+                logging.info(f"Downloaded {len(doc_content)} bytes from URL")
+            except requests.exceptions.Timeout:
+                raise ValueError("Download timeout - file took too long to download")
+            except requests.exceptions.RequestException as e:
+                raise ValueError(f"Failed to download from URL: {str(e)}")
+        elif 'document' in request_data:
+            # Decode base64 document content
+            try:
+                doc_content = base64.b64decode(request_data['document'])
+            except Exception as e:
+                raise ValueError(f"Invalid base64 encoding: {str(e)}")
+        else:
+            raise ValueError("Missing 'document' or 'url' field in request")
         
         filename = request_data.get('filename', f'document.{doc_format}')
         metadata = request_data.get('metadata', {})
