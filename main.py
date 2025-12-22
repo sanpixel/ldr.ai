@@ -1142,7 +1142,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent yellow highlight
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    fill=(255, 255, 0, 17)  # Yellow with 6.6% opacity (17/255), no outline
+                    fill=(255, 255, 0, 31)  # Yellow with 12% opacity (31/255), no outline
                 )
             
             # Check if this matches thence
@@ -1153,7 +1153,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent blue highlight
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    fill=(0, 0, 255, 17)  # Blue with 6.6% opacity (17/255), no outline
+                    fill=(0, 0, 255, 31)  # Blue with 12% opacity (31/255), no outline
                 )
             
             # Check if this matches evidence words
@@ -1164,7 +1164,7 @@ def highlight_supplemental_info_on_image(image_bytes, supplemental_info):
                 # Draw semi-transparent green highlight for evidence data
                 draw.rectangle(
                     [(x, y), (x + w, y + h)],
-                    fill=(0, 255, 0, 17)  # Green with 6.6% opacity (17/255), no outline
+                    fill=(0, 255, 0, 31)  # Green with 12% opacity (31/255), no outline
                 )
             
         
@@ -3018,43 +3018,50 @@ def main():
                     st.write(f"DEBUG exception: {str(e)}")
             
             # Button to open PDF report
-            st.link_button("📄 Open Full PDF Report", report_url)
+            combined_url = st.session_state.get('combined_url')
+            if combined_url:
+                st.link_button("📄 Open Full PDF Report", combined_url)
+            else:
+                st.link_button("📄 Open Full PDF Report", report_url)
         
         # Debug: Show what we're trying to highlight
-        with st.expander("Debug: Yellow Highlighting Info"):
-            # Build the actual search terms the same way the highlight function does
-            search_terms = []
-            if st.session_state.get('supplemental_info'):
-                for key, value in st.session_state.supplemental_info.items():
-                    search_terms.extend(key.split('_'))
-                    if value:
-                        search_terms.append(str(value).lower())
-            st.write("Terms we're looking for:", search_terms)
-            if st.session_state.get('supplemental_info'):
-                st.json(st.session_state.supplemental_info)
+        if st.session_state.get('debug_enabled', False):
+            with st.expander("Debug: Yellow Highlighting Info"):
+                # Build the actual search terms the same way the highlight function does
+                search_terms = []
+                if st.session_state.get('supplemental_info'):
+                    for key, value in st.session_state.supplemental_info.items():
+                        search_terms.extend(key.split('_'))
+                        if value:
+                            search_terms.append(str(value).lower())
+                st.write("Terms we're looking for:", search_terms)
+                if st.session_state.get('supplemental_info'):
+                    st.json(st.session_state.supplemental_info)
         
-        with st.expander("Debug: Blue Highlighting Info"):
-            st.write("Terms we're looking for:", ['thence'])
+        if st.session_state.get('debug_enabled', False):
+            with st.expander("Debug: Blue Highlighting Info"):
+                st.write("Terms we're looking for:", ['thence'])
         
-        with st.expander("Debug: Green Highlighting Info"):
-            try:
-                from utils.classification import get_filtered_classification_data
-                recent_data = get_filtered_classification_data(limit=1)
-                if recent_data and len(recent_data) > 0:
-                    evidence_lines = recent_data[0].get('evidence_lines', [])
-                    evidence_words = recent_data[0].get('evidence_words', [])
-                    st.write("Evidence lines from database:", evidence_lines)
-                    st.write("Evidence words from database:", evidence_words)
-                else:
-                    st.write("No evidence data in database")
-            except Exception as e:
-                st.write(f"Failed to load evidence from database: {str(e)}")
+        if st.session_state.get('debug_enabled', False):
+            with st.expander("Debug: Green Highlighting Info"):
+                try:
+                    from utils.classification import get_filtered_classification_data
+                    recent_data = get_filtered_classification_data(limit=1)
+                    if recent_data and len(recent_data) > 0:
+                        evidence_lines = recent_data[0].get('evidence_lines', [])
+                        evidence_words = recent_data[0].get('evidence_words', [])
+                        st.write("Evidence lines from database:", evidence_lines)
+                        st.write("Evidence words from database:", evidence_words)
+                    else:
+                        st.write("No evidence data in database")
+                except Exception as e:
+                    st.write(f"Failed to load evidence from database: {str(e)}")
         
-        if st.session_state.get('parsed_bearings'):
+        if st.session_state.get('parsed_bearings') and st.session_state.get('debug_enabled', False):
             with st.expander("Debug: Full Parsed Bearings Data"):
                 st.json(st.session_state.parsed_bearings)
         
-        if st.session_state.get('supplemental_response'):
+        if st.session_state.get('supplemental_response') and st.session_state.get('debug_enabled', False):
             with st.expander("Debug: Full Supplemental Info Response"):
                 st.text(st.session_state.supplemental_response)
         

@@ -220,3 +220,19 @@ All tasks, bugs, and ideas consolidated in one place.
 
 ---
 *Last updated: 2025-12-04*
+
+## Cloud Run Container Degradation Issue
+
+**Problem**: After processing several PDFs, file uploads start failing with 400 errors. Works initially, then fails consistently until waiting ~10 minutes.
+
+**Pattern**: 
+- Works fine on fresh container
+- Degrades after multiple file uploads
+- 400 errors persist even after page reload
+- Recovers after 10+ minutes (when Cloud Run spins up new container instance)
+
+**Root Cause**: Cloud Run container instance accumulating resource leaks or getting into bad state. Container recycling after inactivity period fixes it temporarily.
+
+**Impact**: Users can't upload files after using the app for a while, have to wait 10+ minutes for recovery.
+
+**Priority**: Medium - workaround exists (wait), but poor UX
