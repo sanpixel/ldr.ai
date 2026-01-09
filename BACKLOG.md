@@ -220,3 +220,28 @@ All tasks, bugs, and ideas consolidated in one place.
 
 ---
 *Last updated: 2025-12-04*
+
+
+## Streamlit File Upload + Cloud Run Issue
+
+**Problem**: Streamlit's built-in `st.file_uploader` routes file bytes through Cloud Run (`PUT /_stcore/upload_file/<uuid>/<uuid>`), causing:
+- 400 errors after container degradation
+- High Cloud Run costs (~$30) from CPU+memory usage per upload
+- Container state issues after repeated uploads
+
+**Evidence from logs**:
+```
+requestMethod: PUT
+requestUrl: /_stcore/upload_file/...
+requestSize: 26983 (~26 KB)
+status: 400
+```
+
+**Root Cause**: File bytes go through Cloud Run instead of direct-to-GCS.
+
+**Fix**: Replace `st.file_uploader` with direct-to-GCS upload using signed URLs:
+1. Browser asks backend for a signed URL (tiny request)
+2. Browser uploads file directly to GCS (no Cloud Run bytes)
+3. Browser sends the object path back to Cloud Run (tiny request)
+
+**Priority**: High - affects both reliability and cost

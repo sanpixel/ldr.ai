@@ -48,6 +48,7 @@ from math import radians
 import ezdxf
 from io import BytesIO, StringIO
 import pytesseract
+from utils.print_server_config import get_print_server_url, save_print_server_url
 from pdf2image import convert_from_path
 import re
 import tempfile
@@ -2228,6 +2229,18 @@ def main():
     with st.sidebar:
         st.checkbox("🖨️ Auto-print after processing", key="auto_print")
         
+        st.markdown("---")
+        st.subheader("🖨️ Print Server")
+        current_url = get_print_server_url()
+        new_url = st.text_input("Print Server URL", value=current_url, key="print_server_url_input")
+        if st.button("Update Print Server", key="update_print_server"):
+            if save_print_server_url(new_url):
+                st.success("✅ Print server URL updated!")
+                st.rerun()
+            else:
+                st.error("❌ Failed to update print server URL")
+        
+        st.markdown("---")
         st.subheader("Debug Controls")
         debug_password = st.text_input("Debug Password", type="password", key="debug_pw")
         if debug_password == "warez":
@@ -3272,13 +3285,14 @@ def main():
                     
                     # Get API key from environment
                     api_key = 'my-custom-key'
+                    print_server_url = get_print_server_url()
                     
                     # JavaScript code to send to print server
                     js_code = f"""
                     (async () => {{
                         try {{
                             // Send to print server
-                            const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                            const printResponse = await fetch('{print_server_url}/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
@@ -3393,13 +3407,14 @@ def main():
                     
                     # Get API key from environment
                     api_key = 'my-custom-key'
+                    print_server_url = get_print_server_url()
                     
                     # JavaScript code to send to print server
                     js_code = f"""
                     (async () => {{
                         try {{
                             // Send to print server
-                            const printResponse = await fetch('https://f9c54cb3a24a.ngrok-free.app/print', {{
+                            const printResponse = await fetch('{print_server_url}/print', {{
                                 method: 'POST',
                                 headers: {{
                                     'Content-Type': 'application/json',
