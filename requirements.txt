@@ -9,6 +9,7 @@ openai
 reportlab
 python-dotenv
 requests
+resend
 supabase>=2.0.0
 python-jose[cryptography]
 streamlit-oauth

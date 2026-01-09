@@ -40,6 +40,7 @@ jobs:
           GOOGLE_VISION_API_KEY=${{ secrets.GOOGLE_VISION_API_KEY }}
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
           ENVIRONMENT=production
           APP_URL=https://ldr.clocknumbers.com
         secrets: |

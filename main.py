@@ -49,6 +49,7 @@ import ezdxf
 from io import BytesIO, StringIO
 import pytesseract
 from utils.print_server_config import get_print_server_url, save_print_server_url
+from utils.email_service import send_email_with_attachments
 from pdf2image import convert_from_path
 import re
 import tempfile
@@ -3455,6 +3456,59 @@ def main():
                     st.error(f"❌ Combined print error: {str(e)}")
                     if 'trigger_combined_print' in st.session_state:
                         del st.session_state.trigger_combined_print
+        
+        # Email button - always visible
+        with st.expander("📧 Email Results"):
+            # Get user email
+            user = st.session_state.get('user')
+            if user:
+                recipient_email = user.get('email', '')
+                st.write(f"📧 Sending to: **{recipient_email}**")
+            else:
+                recipient_email = st.text_input("Enter your email address:", key="email_input")
+            
+            if st.button("📧 Send Results via Email", key="send_email_btn"):
+                if not recipient_email:
+                    st.error("❌ Please enter an email address")
+                else:
+                    try:
+                        # Collect files
+                        dxf_data = create_dxf()
+                        if not dxf_data:
+                            st.error("❌ Could not generate DXF file")
+                        else:
+                            # Get highlighted PDF
+                            if isinstance(pdf_image, str):
+                                img_response = requests.get(pdf_image)
+                                highlighted_pdf_bytes = img_response.content
+                            else:
+                                highlighted_pdf_bytes = pdf_image
+                            
+                            # Get report PDF
+                            report_url = st.session_state.get('report_url')
+                            if not report_url:
+                                st.error("❌ Report PDF not available")
+                            else:
+                                report_response = requests.get(report_url)
+                                if report_response.status_code != 200:
+                                    st.error("❌ Could not download report PDF")
+                                else:
+                                    report_pdf_bytes = report_response.content
+                                    
+                                    # Send email
+                                    filename_base = st.session_state.get('filename', 'legal_description').rsplit('.', 1)[0]
+                                    if send_email_with_attachments(
+                                        recipient_email,
+                                        dxf_data,
+                                        highlighted_pdf_bytes,
+                                        report_pdf_bytes,
+                                        filename_base
+                                    ):
+                                        st.success(f"✅ Email sent successfully to {recipient_email}!")
+                                    else:
+                                        st.error("❌ Failed to send email. Please try again.")
+                    except Exception as e:
+                        st.error(f"❌ Email error: {str(e)}")
 
 if __name__ == "__main__":
     main()
