@@ -7,9 +7,9 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: us-central1
   SERVICE: ldr-ai
   REGION: us-central1
-  GCS_BUCKET: ldr-deploy-bucket
 
 jobs:
   deploy:
@@ -21,71 +21,33 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install google-cloud-storage requests
-
     - name: Google Auth
       id: auth
       uses: 'google-github-actions/auth@v2'
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY_RAW }}'
-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-
-    - name: Create source archive
-      id: archive
-      run: |
-        python scripts/create_archive.py
-        ARCHIVE=$(ls -t archives/*.tar.gz | head -1)
-        echo "archive_path=$ARCHIVE" >> $GITHUB_OUTPUT
-        echo "archive_name=$(basename $ARCHIVE)" >> $GITHUB_OUTPUT
-
-    - name: Upload archive to Cloud Storage
-      id: upload
-      run: |
-        python scripts/upload_to_gcs.py \
-          "${{ steps.archive.outputs.archive_path }}" \
-          "${{ env.GCS_BUCKET }}" \
-          "${{ steps.archive.outputs.archive_name }}"
-        echo "gcs_path=gs://${{ env.GCS_BUCKET }}/${{ steps.archive.outputs.archive_name }}" >> $GITHUB_OUTPUT
-
+    
     - name: Deploy to Cloud Run
       id: deploy
-      run: |
-        python scripts/deploy_to_cloudrun.py \
-          "${{ env.SERVICE }}" \
-          "${{ steps.upload.outputs.gcs_path }}" \
-          "${{ env.PROJECT_ID }}" \
-          "${{ env.REGION }}"
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        GOOGLE_DRIVE_API_KEY: ${{ secrets.GOOGLE_DRIVE_API_KEY }}
-        GOOGLE_VISION_API_KEY: ${{ secrets.GOOGLE_VISION_API_KEY }}
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-        APP_URL: https://ldr.clocknumbers.com
+      uses: google-github-actions/deploy-cloudrun@v2
+      with:
+        service: ${{ env.SERVICE }}
+        region: ${{ env.REGION }}
+        source: ./
+        env_vars: |
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_DRIVE_API_KEY=${{ secrets.GOOGLE_DRIVE_API_KEY }}
+          GOOGLE_VISION_API_KEY=${{ secrets.GOOGLE_VISION_API_KEY }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          ENVIRONMENT=production
+          APP_URL=https://ldr.clocknumbers.com
+        secrets: |
+          GCS_SERVICE_ACCOUNT_KEY=gcs-service-account-key:latest
+        labels: |
+          managed-by=github-actions
+          commit-sha=${{ github.sha }}
 
-    - name: Deployment Summary
-      if: success()
-      run: |
-        echo "✅ Deployment successful!"
-        echo "Service: ${{ env.SERVICE }}"
-        echo "Region: ${{ env.REGION }}"
-        echo "Archive: ${{ steps.archive.outputs.archive_name }}"
-        echo "GCS Path: ${{ steps.upload.outputs.gcs_path }}"
-
-    - name: Deployment Failed
-      if: failure()
-      run: |
-        echo "❌ Deployment failed!"
-        echo "Check the logs above for details"
-        exit 1
+    - name: Show Output
+      run: echo ${{ steps.deploy.outputs.url }}
